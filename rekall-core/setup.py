@@ -26,6 +26,7 @@ __author__ = "Michael Cohen <scudette@gmail.com>"
 import os
 import subprocess
 import setuptools
+import shutil
 
 from setuptools import find_packages, setup, Command
 
@@ -133,10 +134,34 @@ class CleanCommand(Command):
         self.cwd = os.getcwd()
 
     def run(self):
+        def remove_directory(dir_to_remove: str):
+            if os.path.exists(dir_to_remove):
+                for t in range(1, 3):
+                    try:
+                        shutil.rmtree(dir_to_remove)
+                        return
+                    except Exception as e:
+                        time.sleep(1)
+                else:
+                    raise Exception('Can not remove direcotry. dir={}'.format(dir_to_remove))
+                    if os.path.exists(dir_to_remove):
+                        for t in range(1, 3):
+                            try:
+                                shutil.rmtree(dir_to_remove)
+                                return
+                            except Exception as e:
+                                time.sleep(1)
+                    else:
+                        raise Exception('Can not remove direcotry. dir={}'.format(dir_to_remove))
+            
         if os.getcwd() != self.cwd:
             raise RuntimeError('Must be in package root: %s' % self.cwd)
 
-        os.system('rm -rf ./build ./dist')
+        # somma
+        # os.system('rm -rf ./build ./dist')
+        remove_directory(os.path.join(os.getcwd(), 'build'))
+        remove_directory(os.path.join(os.getcwd(), 'dist'))
+
 
 
 commands = {}
