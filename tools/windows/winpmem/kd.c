@@ -39,7 +39,7 @@ IMAGE_DOS_HEADER *KernelGetModuleBaseByPtr(IN void *in_section) {
     count ++;
 
     // Dont go back too far.
-    if (count > 0x800) {
+    if (count > (0x800*2)) {
       return NULL;
     };
 

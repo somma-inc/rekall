@@ -146,6 +146,78 @@
         name = "live"    
     ```
 
+
+# Windows 2004 Enterprise
+
+    ```
+    kd> 
+    Browse full module list
+    start             end                 module name
+    fffff800`5bc19000 fffff800`5cc5f000   nt         (pdb symbols)          c:\symbols\ntkrnlmp.pdb\641F55C592201DCC4F59FACC72EA54DA1\ntkrnlmp.pdb
+        Loaded symbol image file: ntkrnlmp.exe
+        Image path: ntkrnlmp.exe
+        Image name: ntkrnlmp.exe
+        Browse all global symbols  functions  data
+        Image was built with /Brepro flag.
+        Timestamp:        A371A2E9 (This is a reproducible build file hash, not a timestamp)
+        CheckSum:         00A611D3
+        ImageSize:        01046000
+        File version:     10.0.19041.508
+        Product version:  10.0.19041.508
+        File flags:       0 (Mask 3F)
+        File OS:          40004 NT Win32
+        File type:        1.0 App
+        File date:        00000000.00000000
+        Translations:     0409.04b0
+        Information from resource tables:
+            CompanyName:      Microsoft Corporation
+            ProductName:      Microsoft® Windows® Operating System
+            InternalName:     ntkrnlmp.exe
+            OriginalFilename: ntkrnlmp.exe
+            ProductVersion:   10.0.19041.508
+            FileVersion:      10.0.19041.508 (WinBuild.160101.0800)
+            FileDescription:  NT Kernel & System
+            LegalCopyright:   © Microsoft Corporation. All rights reserved.
+
+    ```
+
++ winpmem::DriverEntry
+    - ntoskrnl 시작주소를 찾기 위해 NtBuildNumber 심볼로부터 페이지만큼 스캔함
+
+    ```
+    [2004]
+    1: kd> lmvm nt
+    Browse full module list
+    start             end                 module name
+    fffff800`5bc19000 fffff800`5cc5f000   nt         (pdb symbols)          c:\symbols\ntkrnlmp.pdb\641F55C592201DCC4F59FACC72EA54DA1\ntkrnlmp.pdb
+        Loaded symbol image file: ntkrnlmp.exe
+
+    1: kd> db fffff800`5bc19000 L8
+    fffff800`5bc19000  4d 5a 90 00 03 00 00 00                          MZ......
+
+    1: kd> x nt!NtBuildNumber
+    fffff800`5c82ae90 nt!NtBuildNumber = <no type information>
+
+    1: kd> ? fffff800`5c82ae90-fffff800`5bc19000
+    Evaluate expression: 12656272 = 00000000`00c11e90
+
+    ```
+
+    ```
+    [1903]
+    1: kd> lmvm nt
+    Browse full module list
+    start             end                 module name
+    fffff800`5bc19000 fffff800`5cc5f000   nt         (pdb symbols)          c:\symbols\ntkrnlmp.pdb\641F55C592201DCC4F59FACC72EA54DA1\ntkrnlmp.pdb
+        Loaded symbol image file: ntkrnlmp.exe
+
+    1: kd> x nt!NtBuildNumber
+    fffff800`5c82ae90 nt!NtBuildNumber = <no type information>
+
+    1: kd> ? fffff800`5c82ae90-fffff800`5bc19000
+    Evaluate expression: 12656272 = 00000000`00c11e90
+    ```
+
 # Commands ref.
 - winpmem 드라이버를 사용하기때문에 항상 관리자권한으로
 
@@ -157,50 +229,3 @@ rekal --live Memory psscan --scan_kernel_paged_pool --scan_kernel_nonpaged_pool 
 ---
 
 rekal --live Memory --verbose
-
-
-
-
-
- `rekall-yara` 설치중 에러
-
-    ```
-    Installed c:\programdata\anaconda3\envs\rekall\lib\site-packages\rekall_core-1.7.3.dev65-py3.8.egg
-    Processing dependencies for rekall-core==1.7.3.dev65
-    Searching for rekall-yara==3.6.3.1
-    Reading https://pypi.org/simple/rekall-yara/
-    Downloading https://files.pythonhosted.org/packages/c1/a2/a1fd733b5855208c20408cb74d6303c90dededc127e78fbca2dee52ef54a/rekall_yara-3.6.3.1.tar.gz#sha256=84cd9bad4da12e2e8b32fb1a429eaee8793eda97f0859ed3edc063a7eac24915
-    Best match: rekall-yara 3.6.3.1
-    Processing rekall_yara-3.6.3.1.tar.gz
-    Writing C:\Users\unsor\AppData\Local\Temp\easy_install-uyzl9mdk\rekall_yara-3.6.3.1\setup.cfg
-    Running rekall_yara-3.6.3.1\setup.py -q bdist_egg --dist-dir C:\Users\unsor\AppData\Local\Temp\easy_install-uyzl9mdk\rekall_yara-3.6.3.1\egg-dist-tmp-vg2cxmrm
-    no previously-included directories found matching 'rekall_yara\yara\windows'
-    no previously-included directories found matching 'rekall_yara\yara\docs'
-    no previously-included directories found matching 'rekall_yara\yara\tests'
-    error: Setup script exited with error: Microsoft Visual C++ 14.0 or greater is required. Get it with "Microsoft C++ Build Tools": https://visualstudio.microsoft.com/visual-cpp-build-tools/
-    ```
-
-    ```
-    (rekall) C:\work.rekall\rekall-core>pip install rekall-yara
-    Collecting rekall-yara
-    Using cached rekall_yara-3.6.3.1.tar.gz (1.2 MB)
-    Building wheels for collected packages: rekall-yara
-    Building wheel for rekall-yara (setup.py) ... error
-    ERROR: Command errored out with exit status 1:
-    command: 'c:\programdata\anaconda3\envs\rekall\python.exe' -u -c 'import sys, setuptools, tokenize; sys.argv[0] = '"'"'C:\\Users\\unsor\\AppData\\Local\\Temp\\pip-install-yhmk27zm\\rekall-yara\\setup.py'"'"'; __file__='"'"'C:\\Users\\unsor\\AppData\\Local\\Temp\\pip-install-yhmk27zm\\rekall-yara\\setup.py'"'"';f=getattr(tokenize, '"'"'open'"'"', open)(__file__);code=f.read().replace('"'"'\r\n'"'"', '"'"'\n'"'"');f.close();exec(compile(code, __file__, '"'"'exec'"'"'))' bdist_wheel -d 'C:\Users\unsor\AppData\Local\Temp\pip-wheel-lcci3h4g'
-        cwd: C:\Users\unsor\AppData\Local\Temp\pip-install-yhmk27zm\rekall-yara\
-    Complete output (10 lines):
-    running bdist_wheel
-    running build
-    running build_py
-    creating build
-    creating build\lib.win-amd64-3.8
-    creating build\lib.win-amd64-3.8\rekall_yara
-    copying rekall_yara\__init__.py -> build\lib.win-amd64-3.8\rekall_yara
-    running build_ext
-    building 'yara' extension
-    error: Microsoft Visual C++ 14.0 or greater is required. Get it with "Microsoft C++ Build Tools": https://visualstudio.microsoft.com/visual-cpp-build-tools/
-    ----------------------------------------
-    ERROR: Failed building wheel for rekall-yara
-    Running setup.py clean for rekall-yara
-  ```
