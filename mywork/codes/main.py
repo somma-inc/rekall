@@ -170,7 +170,7 @@ if __name__ == '__main__':
     # pslist
     idx = 0
     pslist = {}
-    for obj in read_pslist(os.path.join(os.getcwd(), '..', 'pslist.txt')):
+    for obj in read_pslist(os.path.join(os.getcwd(), '..', 'pslist_2004.txt')):
         pslist[obj.eprocess] = obj
         #if not obj.process_exit_time:
         #    print('{:>04}, {}, {}, {}'.format(idx, obj.eprocess, obj.name, obj.process_exit_time))
@@ -179,7 +179,7 @@ if __name__ == '__main__':
     # psscan
     idx = 0
     psscan = {}
-    for obj in read_psscan(os.path.join(os.getcwd(), '..', 'psscan.txt')):
+    for obj in read_psscan(os.path.join(os.getcwd(), '..', 'psscan_2004.txt')):
         if obj:
             psscan[obj.eprocess] = obj
             #if not obj.process_exit_time:
@@ -189,7 +189,7 @@ if __name__ == '__main__':
     # windbg
     idx = 0
     windbg = {}
-    for obj in read_windbg(os.path.join(os.getcwd(), '..', 'windbg.txt')):
+    for obj in read_windbg(os.path.join(os.getcwd(), '..', 'windbg_2004.txt')):
         windbg[obj.eprocess] = obj
         #print('{:>04}, {}, {}, {}'.format(idx, obj.eprocess, obj.name, obj.process_exit_time))
         #idx += 1
