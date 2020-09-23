@@ -43,3 +43,5 @@ from rekall.plugins.windows import vadinfo
 
 if sys.version_info[0] >= 3 and sys.version_info[1] > 4:
     from rekall.plugins.windows import pypykatz
+
+from rekall.plugins.windows import win10_memcompression

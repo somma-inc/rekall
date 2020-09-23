@@ -98,8 +98,9 @@ install_requires = [
     "rekall-agent >= 1.7.0rc1, < 1.8",
     "rekall-lib >= 1.7.0rc1, < 1.8",
     "rekall-core >= 1.7.0rc1, < 1.8",
-    "ipython==6.5.0",
-    
+   # "prompt-toolkit~=2.0.10",
+    #"ipython > 7.0.1, <= 7.1.6",
+
 ]
 
 setup(

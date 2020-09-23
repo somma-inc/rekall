@@ -108,7 +108,7 @@ windows_overlay = {
         'CreateTime' : [None, ['WinFileTime', {}]],
         'ExitTime' : [None, ['WinFileTime', {}]],
         'InheritedFromUniqueProcessId' : [None, ['unsigned int']],
-        'ImageFileName' : [None, ['String', dict(length=16)]],
+        'ImageFileName' : [None, ['String', dict(length=64)]],
         'UniqueProcessId' : [None, ['unsigned int']],
         'Session': [None, ["Pointer", dict(target="_MM_SESSION_SPACE")]],
         'Token': [None, ["_EX_FAST_REF", dict(target="_TOKEN")]],
@@ -750,7 +750,12 @@ class _EPROCESS(obj.Struct):
         pid = self.pid
 
         # PID must be in a reasonable range.
-        if pid < 0 or pid > 0xFFFF:
+        if self.IsWow64:
+            max_pid = 0xFFFF
+        else:
+            max_pid = 0xFFFFFFFF
+
+        if pid < 0 or pid > max_pid:
             return False
 
         # Since we're not validating memory pages anymore it's important

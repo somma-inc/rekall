@@ -117,6 +117,7 @@ class EProcessIndex(basic.ProfileLLP64):
         super(EProcessIndex, cls).Initialize(profile)
         profile.add_types({
             '_KUSER_SHARED_DATA': [None, {
+                "NtBuildNumber": [608, ["unsigned long", {}]],
                 "NtMajorVersion": [620, ["unsigned long", {}]],
                 "NtMinorVersion": [624, ["unsigned long", {}]],
                 }]

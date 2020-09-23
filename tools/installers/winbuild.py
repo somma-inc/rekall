@@ -136,9 +136,9 @@ def touch(path):
 
 
 def main():
-    if os.environ.get("VIRTUAL_ENV") is None:
-        raise RuntimeError("You must run this script from within a "
-                           "virtual env.")
+    # if os.environ.get("VIRTUAL_ENV") is None:
+    #     raise RuntimeError("You must run this script from within a "
+    #                        "virtual env.")
 
     if not os.path.isdir("tools/installers"):
         raise RuntimeError("You must run this script from the top "
@@ -157,6 +157,17 @@ def main():
 
     print("Copy missing DLLs.")
     subprocess.call(["python", "tools/installers/copy_dlls.py"])
+
+    print("Copy capstone libraries.")
+    try:
+        shutil.copy(
+           "dist/rekal/capstone/capstone.dll",
+            "dist/rekal"
+        )
+        print('capstone.dll copy success.')
+    except Exception as ex:
+        print('capstone.dll copy failed.')
+        print(f'ex={str(ex)}')
 
     print("Copy resources into the package.")
     # Recent versions of Pyinstaller already copy resources they know about.
