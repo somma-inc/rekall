@@ -377,8 +377,12 @@ class PoolScanProcess(common.PoolScanner):
             # kernel dbg 붙여서 pslist / psscan (error 나는 주소) / kernel dbg 로 메모리분석해서 비교해보기
             for object_header in pool_obj.IterObject("Process", freed=True):
                 eprocess = object_header.Body.cast("_EPROCESS")
+                self.session.logging.debug('[!] pool=0x{:016x}, eprocess=0x{:016x}'
+                                           .format(int(object_header),
+                                                   int(eprocess)))
+
                 if eprocess.Pcb.DirectoryTableBase == 0:
-                    self.session.logging.debug('somma, no dtb, skip eprocess=0x{:>016x}, pid={}, {}'
+                    self.session.logging.debug('[!] eprocess=0x{:>016x}, pid={}, {}, no dtb'
                                                .format(eprocess.obj_offset,
                                                        eprocess.pid,
                                                        eprocess.ImageFileName))
@@ -398,8 +402,12 @@ class PoolScanProcess(common.PoolScanner):
                 # Pointers must point to the kernel part of the address space.
                 list_head = eprocess.ActiveProcessLinks
                 if (list_head.Flink < self.kernel or list_head.Blink < self.kernel):
-                    self.session.logging.debug("somma, invalid range skip list flink={}, blink={}".format(list_head.Flink.value,
-                                                                                                          list_head.Blink.value))
+                    self.session.logging.debug('[!] eprocess=0x{:>016x}, pid={}, {}, invalid flink={}, blink={}'
+                                               .format(eprocess.obj_offset,
+                                                       eprocess.pid,
+                                                       eprocess.ImageFileName,
+                                                       list_head.Flink.value,
+                                                       list_head.Blink.value))
                     continue
 
                 yield pool_obj, eprocess
