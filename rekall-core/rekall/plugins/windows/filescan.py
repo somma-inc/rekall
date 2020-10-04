@@ -371,6 +371,8 @@ class PoolScanProcess(common.PoolScanner):
         for pool_obj in super(PoolScanProcess, self).scan(**kwargs):
             # Also fetch freed objects.
 
+            # somma, pool_obj 는 POOL_HEADER 객체임
+
             # refac - somma
             # kernel dbg 붙여서 pslist / psscan (error 나는 주소) / kernel dbg 로 메모리분석해서 비교해보기
             for object_header in pool_obj.IterObject("Process", freed=True):
