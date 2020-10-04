@@ -465,6 +465,41 @@
     rekal --live Memory --verbose
     ```
 
+- debugging (I) 하기 
+    - `rekal --live Memory --verbose` 명령으로 rekall 실행
+    - pycharm 을 관리자 권한으로 실행
+    - pycharm -> Run -> Attach to process 로 rekall 프로세스에 어태치
+    - pycharm -> External Libraries -> rekall-core ->
+
+- debugging (II)
+    - Pycharm 디버거로 `C:\work.rekall\rekall-core\rekall\rekal.py --live Memory --verbose` 실행
+    - pycharm -> Run -> Attach to process 로 rekall 프로세스에 어태치
+    - pycharm -> External Libraries -> rekall-core 내 python 모듈에 브레이크 포인트 설정
+    - 아래와 같은 에러발생시 `c:\Users\unsor\anaconda3\envs\rekall\Lib\site-packages\rekall_capstone-3.0.5.post2-py3.8-win-amd64.egg\capstone\capstone.dll` 을 system32 폴더에 복사해주고, 다시 실행한다.
+    
+        ```
+        Connected to pydev debugger (build 202.6948.78)
+        Traceback (most recent call last):
+        File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+        File "<frozen importlib._bootstrap>", line 975, in _find_and_load_unlocked
+        File "<frozen importlib._bootstrap>", line 671, in _load_unlocked
+        File "<frozen importlib._bootstrap_external>", line 783, in exec_module
+        File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+        File "C:\Users\unsor\anaconda3\envs\rekall\lib\site-packages\rekall_core-1.7.3.dev65-py3.8.egg\rekall\plugins\__init__.py", line 4, in <module>
+            from rekall.plugins import addrspaces
+        File "C:\Users\unsor\anaconda3\envs\rekall\lib\site-packages\rekall_core-1.7.3.dev65-py3.8.egg\rekall\plugins\addrspaces\__init__.py", line 8, in <module>
+            from rekall.plugins.addrspaces import ewf
+        File "C:\Users\unsor\anaconda3\envs\rekall\lib\site-packages\rekall_core-1.7.3.dev65-py3.8.egg\rekall\plugins\addrspaces\ewf.py", line 26, in <module>
+            from rekall.plugins.tools import ewf
+        File "C:\Users\unsor\anaconda3\envs\rekall\lib\site-packages\rekall_core-1.7.3.dev65-py3.8.egg\rekall\plugins\tools\__init__.py", line 30, in <module>
+            from rekall.plugins.tools import disassembler
+        File "C:\Users\unsor\anaconda3\envs\rekall\lib\site-packages\rekall_core-1.7.3.dev65-py3.8.egg\rekall\plugins\tools\disassembler.py", line 29, in <module>
+            import capstone
+        File "C:\Users\unsor\anaconda3\envs\rekall\lib\site-packages\rekall_capstone-3.0.5.post2-py3.8-win-amd64.egg\capstone\__init__.py", line 252, in <module>
+            raise ImportError("ERROR: fail to load the dynamic library.")
+        ImportError: ERROR: fail to load the dynamic library.
+        ```
+
 
 # 각 플러그인간 결과 비교
 
