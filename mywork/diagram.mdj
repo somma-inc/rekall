@@ -1458,9 +1458,9 @@
 							"font": "Arial;13;0",
 							"left": 1304,
 							"top": 248,
-							"width": 313,
+							"width": 369,
 							"height": 42,
-							"text": "self.session.profile.constants['PoolAlignment']\n\n값씩 skip"
+							"text": "self.session.profile.constants['PoolAlignment']\n\n값씩 skip  (16 byte)"
 						},
 						{
 							"_type": "UMLNoteLinkView",
@@ -1476,7 +1476,7 @@
 								"$ref": "AAAAAAF08aRK74yHXfY="
 							},
 							"lineStyle": 1,
-							"points": "1351:535;1451:290"
+							"points": "1355:535;1477:290"
 						},
 						{
 							"_type": "UMLClassView",
