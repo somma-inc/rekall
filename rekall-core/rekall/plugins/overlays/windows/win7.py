@@ -393,12 +393,24 @@ class _POOL_HEADER(common._POOL_HEADER):
                 offset=i, vm=cached_vm)
 
             if test_object.is_valid():
+                # refac
+                '''
                 if (type is None or
                         test_object.get_object_type() == type or
                         # Freed objects point to index 1
                         #(which is also 0xbad0b0b0).
                         (freed and test_object.TypeIndex <= 2)):
                     yield test_object
+                '''
+                obj_type = test_object.get_object_type()
+
+                if type is None:
+                    yield test_object
+                elif type == obj_type:
+                    yield test_object
+                elif freed and test_object.TypeIndex <= 2:
+                    yield test_object
+
 
 
 class ObjectTypeMapHook(kb.ParameterHook):
