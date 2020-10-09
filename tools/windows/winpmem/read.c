@@ -89,8 +89,7 @@ static LONG MapIOPagePartialRead(IN PDEVICE_EXTENSION extension,
   ViewBase.QuadPart = offset.QuadPart - page_offset;
 
   // Map exactly one page.
-  mapped_buffer = Pmem_KernelExports.MmMapIoSpace(
-    ViewBase, PAGE_SIZE, MmNonCached);
+  mapped_buffer = MmMapIoSpace(ViewBase, PAGE_SIZE, MmNonCached);
 
   if (mapped_buffer) {
 	try {
@@ -98,11 +97,11 @@ static LONG MapIOPagePartialRead(IN PDEVICE_EXTENSION extension,
 	  RtlCopyMemory(buf, mapped_buffer+page_offset, to_read);
     } except(EXCEPTION_EXECUTE_HANDLER) {
 	  WinDbgPrintDebug("Unable to read %d bytes from %p for %p\n", to_read, source, offset.QuadPart - page_offset);
-	  Pmem_KernelExports.MmUnmapIoSpace(mapped_buffer, PAGE_SIZE);
+	  MmUnmapIoSpace(mapped_buffer, PAGE_SIZE);
 	  return -1;
 	 }
 
-    Pmem_KernelExports.MmUnmapIoSpace(mapped_buffer, PAGE_SIZE);
+    MmUnmapIoSpace(mapped_buffer, PAGE_SIZE);
 	return to_read;
   } else {
     // Failed to map page, return an error.
