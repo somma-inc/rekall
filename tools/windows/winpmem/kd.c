@@ -15,66 +15,80 @@
 */
 
 #include "kd.h"
+#include "SystemModInfoInvocation.h"
 
-/*
-  This code inspired and updated from
-  http://alter.org.ua/docs/nt_kernel/procaddr/#KernelGetModuleBaseByPtr
+SIZE_T KernelGetModuleBaseByPtr()
+{
+	NTSTATUS status = STATUS_SUCCESS;
 
-  We try to locate the kernel's base address. We do this by looking for an MZ
-  header a short space before the location of a known exported symbol.
+	ULONG ModuleCount = 0;
+	ULONG i = 0, j = 0;
 
-  Unfortunately we might hit unmapped kernel memory which will blue screen so we
-  need to check if the kernel address is at all valid.
-*/
+	ULONG NeedSize = 0;
+	ULONG preAllocateSize = 0x1000;
+	PVOID pBuffer = NULL;
 
-IMAGE_DOS_HEADER *KernelGetModuleBaseByPtr(IN void *in_section) {
-  unsigned char *p;
-  IMAGE_DOS_HEADER *dos = NULL;
-  IMAGE_NT_HEADERS *nt;
-  int count = 0;
+	SIZE_T imagebase_of_nt = 0;
 
-  p = (unsigned char *)((uintptr_t)in_section & ~(PAGE_SIZE-1));
+	PSYSTEM_MODULE_INFORMATION pSystemModuleInformation;
 
-  for(;p;p -= PAGE_SIZE) {
-    count ++;
+	PAGED_CODE();
 
-    // Dont go back too far.
-    if (count > (0x800*2)) {
-      return NULL;
-    };
+	// Preallocate 0x1000 bytes and try.
+	pBuffer = ExAllocatePoolWithTag(NonPagedPool, preAllocateSize, PMEM_POOL_TAG);
+	if (pBuffer == NULL)
+	{
+		return 0;
+	}
 
-    __try {
-      dos = (IMAGE_DOS_HEADER *)p;
+	status = ZwQuerySystemInformation(SystemModuleInformation, pBuffer, preAllocateSize, &NeedSize);
 
-      // If this address is not mapped in, there will be a BSOD
-      // PAGE_FAULT_IN_NONPAGED_AREA so we check first.
-      if(!MmIsAddressValid(dos)) {
-        continue;
-      }
+	if ((status == STATUS_INFO_LENGTH_MISMATCH) || (status == STATUS_BUFFER_OVERFLOW))
+	{
+		ExFreePool(pBuffer);
+		pBuffer = ExAllocatePoolWithTag(NonPagedPool, NeedSize, PMEM_POOL_TAG);
+		status = ZwQuerySystemInformation(SystemModuleInformation, pBuffer, NeedSize, &NeedSize);
+	}
 
-      if(dos->e_magic != 0x5a4d) // MZ
-        continue;
+	if (!NT_SUCCESS(status))
+	{
+		ExFreePool(pBuffer);
+		DbgPrint("KernelGetModuleBaseByPtr() failed with %08x.\n", status);
+		return 0;
+	}
 
-      nt = (IMAGE_NT_HEADERS *)((uintptr_t)dos + dos->e_lfanew);
-      if((uintptr_t)nt >= (uintptr_t)in_section)
-        continue;
+	pSystemModuleInformation = (PSYSTEM_MODULE_INFORMATION)pBuffer;
 
-      if((uintptr_t)nt <= (uintptr_t)dos)
-        continue;
+	ModuleCount = pSystemModuleInformation->Count;
 
-      if(!MmIsAddressValid(nt)) {
-        continue;
-      }
-      if(nt->Signature != 0x00004550) // PE
-        continue;
+	for (i = 0; i < ModuleCount; i++)
+	{
+		if (pSystemModuleInformation->Module[i].ImageName)
+		{
+			for (j = 0; j < 250; j++)
+			{
+				// There are so many names for NT kernels: ntoskrnl, ntkrpamp, ...
+				if (
+					((pSystemModuleInformation->Module[i].ImageName[j + 0] | 0x20) == 'n') &&
+					((pSystemModuleInformation->Module[i].ImageName[j + 1] | 0x20) == 't') &&
 
-      break;
+					(((pSystemModuleInformation->Module[i].ImageName[j + 2] | 0x20) == 'o') &&
+					((pSystemModuleInformation->Module[i].ImageName[j + 3] | 0x20) == 's'))
+					||
+					(((pSystemModuleInformation->Module[i].ImageName[j + 2] | 0x20) == 'k') &&
+					((pSystemModuleInformation->Module[i].ImageName[j + 3] | 0x20) == 'r'))
+					) // end of nt kernel name check.
+				{
+					imagebase_of_nt = (SIZE_T)pSystemModuleInformation->Module[i].Base;
+					return imagebase_of_nt;
+				}
 
-      // Ignore potential errors.
-    } __except(EXCEPTION_CONTINUE_EXECUTION) {}
-  }
+			}
+		}
+	}
 
-  return dos;
+	ExFreePool(pBuffer);
+	return 0;
 }
 
 /* Resolve a kernel function by name.

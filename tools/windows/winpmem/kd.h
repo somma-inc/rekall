@@ -20,7 +20,7 @@
 #include "winpmem.h"
 #include "ntimage.h"
 
-IMAGE_DOS_HEADER *KernelGetModuleBaseByPtr(IN void *in_section);
+SIZE_T KernelGetModuleBaseByPtr();
 
 void *KernelGetProcAddress(void *image_base, char *func_name);
 
