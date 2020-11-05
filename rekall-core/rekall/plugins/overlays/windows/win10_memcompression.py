@@ -407,7 +407,7 @@ win10_mem_comp_x86_1607 = {
 def initialize_win10_mem_compression(profile, build_number):
     amd64 = profile.metadata("arch") == "AMD64"
 
-    if build_number in [14393, 15063, 16299, 17134, 17763, 18362]:
+    if build_number in [14393, 15063, 16299, 17134, 17763, 18362, 18363, 19041]:
         profile.add_overlay(win10_mem_comp_common_vtypes)
         if amd64:
             profile.add_overlay(win10_mem_comp_common_x64_vtypes)
@@ -456,5 +456,18 @@ def initialize_win10_mem_compression(profile, build_number):
             profile.add_overlay(win10_mem_comp_x86_1903)
 
         return True
+    elif build_number == 18363:
+        if amd64:
+            profile.add_overlay(win10_mem_comp_x64_1903)
+        else:
+            profile.add_overlay(win10_mem_comp_x86_1903)
 
+        return True
+    elif build_number == 19041:
+        if amd64:
+            profile.add_overlay(win10_mem_comp_x64_1903)
+        else:
+            profile.add_overlay(win10_mem_comp_x86_1903)
+
+        return True
     return False

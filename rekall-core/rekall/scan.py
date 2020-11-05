@@ -482,10 +482,15 @@ class BaseScanner(with_metaclass(registry.MetaclassRegistry, object)):
                     last_reported_hit = scan_offset
                     yield res
 
+                skip_offset = self.skip(buffer_as, scan_offset)
+                #self.session.logging.debug("scan offset: {:02X}, skip value: {}".format(scan_offset, skip_offset))
+
                 # Skip as much data as the skippers tell us to, up to the
                 # end of the buffer.
+                # todo hong 이 부분을 확인 해야함.
                 scan_offset += min(len(buffer_as),
-                                   self.skip(buffer_as, scan_offset))
+                                   skip_offset)
+                #scan_offset += 16
 
 
 class FastStructScanner(BaseScanner):

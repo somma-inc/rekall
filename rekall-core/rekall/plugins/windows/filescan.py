@@ -362,15 +362,28 @@ class PoolScanProcess(common.PoolScanner):
             for object_header in pool_obj.IterObject("Process", freed=True):
                 eprocess = object_header.Body.cast("_EPROCESS")
                 if eprocess.Pcb.DirectoryTableBase == 0:
+                    self.session.logging.debug(
+                        'no dtb, skip eprocess=0x{:>016x}, pid={}, {}'.format(
+                            eprocess.obj_offset,
+                            eprocess.pid,
+                            eprocess.ImageFileName
+                        )
+                    )
                     continue
 
-                if eprocess.Pcb.DirectoryTableBase % self.dtb_alignment != 0:
-                    continue
+                # if eprocess.Pcb.DirectoryTableBase % self.dtb_alignment != 0:
+                #     continue
 
                 # Pointers must point to the kernel part of the address space.
                 list_head = eprocess.ActiveProcessLinks
                 if (list_head.Flink < self.kernel or
                         list_head.Blink < self.kernel):
+                    self.session.logging.debug(
+                        'invalid range skip list flink={}, blink={}'.format(
+                            list_head.Flink.value,
+                            list_head.Blink.value,
+                        )
+                    )
                     continue
 
                 yield pool_obj, eprocess
@@ -417,6 +430,12 @@ class PSScan(common.WinScanner):
 
         # Scan each requested run in turn.
         for run in self.generate_memory_ranges():
+            self.session.logging.debug(
+                'Run PSScan Plugin, Scan Region={}->{}, Region Type={}'.format(
+                    hex(run.start),
+                    hex(run.end),
+                    run.data["type"]
+            ))
             # Just grab the AS and scan it using our scanner
             scanner = PoolScanProcess(session=self.session,
                                       profile=self.profile,
