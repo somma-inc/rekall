@@ -26,6 +26,7 @@ __author__ = "Michael Cohen <scudette@gmail.com>"
 import os
 import subprocess
 import setuptools
+import shutil
 
 from setuptools import find_packages, setup, Command
 
@@ -56,13 +57,13 @@ install_requires = [
     'acora==2.1',
     'arrow==0.10.0',
     'artifacts==20170909',
-    'future',
+    'future==0.16.0',
     'intervaltree==2.1.0',
     'ipaddr==2.2.0',
     'parsedatetime==2.4',
     "psutil >= 5.0, < 6.0",
-    'pyaff4 >= 0.26, < 0.30',
-    'pycryptodome==3.4.7',
+    'pyaff4 ==0.26.post6',
+    'pycryptodome==3.6.6',
     'pyelftools==0.24',
     'pyparsing==2.1.5',
     'python-dateutil==2.6.1',
@@ -70,7 +71,7 @@ install_requires = [
     'pytz==2017.3',
     'rekall-capstone==3.0.5.post2',
     "rekall-efilter >= 1.6, < 1.7",
-    'pypykatz>=0.0.6;python_version>="3.5"',
+    'pypykatz>=0.3.5;python_version>="3.5"',
 
     # Should match exactly the version of this package.
     'rekall-lib',
@@ -133,10 +134,34 @@ class CleanCommand(Command):
         self.cwd = os.getcwd()
 
     def run(self):
+        def remove_directory(dir_to_remove: str):
+            if os.path.exists(dir_to_remove):
+                for t in range(1, 3):
+                    try:
+                        shutil.rmtree(dir_to_remove)
+                        return
+                    except Exception as e:
+                        time.sleep(1)
+                else:
+                    raise Exception('Can not remove direcotry. dir={}'.format(dir_to_remove))
+                    if os.path.exists(dir_to_remove):
+                        for t in range(1, 3):
+                            try:
+                                shutil.rmtree(dir_to_remove)
+                                return
+                            except Exception as e:
+                                time.sleep(1)
+                    else:
+                        raise Exception('Can not remove direcotry. dir={}'.format(dir_to_remove))
+            
         if os.getcwd() != self.cwd:
             raise RuntimeError('Must be in package root: %s' % self.cwd)
 
-        os.system('rm -rf ./build ./dist')
+        # somma
+        # os.system('rm -rf ./build ./dist')
+        remove_directory(os.path.join(os.getcwd(), 'build'))
+        remove_directory(os.path.join(os.getcwd(), 'dist'))
+
 
 
 commands = {}

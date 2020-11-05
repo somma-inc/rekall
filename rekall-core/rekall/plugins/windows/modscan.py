@@ -52,7 +52,8 @@ class PoolScanModuleFast(common.PoolScanner):
             ('CheckPoolType', dict(
                 paged=True, non_paged=True, free=True)),
 
-            ('CheckPoolIndex', dict(value=0)),
+            # todo 대체 왜..CheckPoolIndex만 체크하면 이상한 문제가 생기는가??;;
+            #  ('CheckPoolIndex', dict(value=0)),
             ]
 
 

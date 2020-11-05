@@ -347,9 +347,17 @@ class PoolScanner(scan.BaseScanner):
         """Yields instances of _POOL_HEADER which potentially match."""
 
         maxlen = maxlen or self.session.profile.get_constant("MaxPointer")
+        self.session.logging.debug("[Pool Scanner] Start Offset = 0x{:>016x}".format(offset))
         for hit in super(PoolScanner, self).scan(offset=offset, maxlen=maxlen):
-            yield self.session.profile._POOL_HEADER(
-                vm=self.address_space, offset=hit)
+            pool_obj = self.session.profile._POOL_HEADER(vm=self.address_space, offset=hit)
+            self.session.logging.debug(
+                "[Pool Scanner] Find Pool Header!! Offset = 0x{:>016x}, Block Size={} Pool Size={}".format(
+                    hit,
+                    pool_obj.BlockSize,
+                    pool_obj.BlockSize * 16,
+                )
+            )
+            yield pool_obj
 
 
 class KDBGHook(AbstractWindowsParameterHook):

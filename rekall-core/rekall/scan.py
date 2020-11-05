@@ -184,6 +184,13 @@ class StringCheck(ScannerCheck):
     def skip(self, buffer_as, offset):
         # Search the rest of the buffer for the needle.
         buffer_offset = buffer_as.get_buffer_offset(offset) + self.needle_offset
+        self.session.logging.debug(
+            '[StringChecker] skip() started. offset: 0x{:>016x}, buffer offset: 0x{:>016x}, needle offset: {}'.format(
+                offset,
+                buffer_offset,
+                self.needle_offset
+            )
+        )
         dindex = buffer_as.data.find(self.needle, buffer_offset + 1)
         if dindex > -1:
             return dindex - buffer_offset
@@ -407,10 +414,18 @@ class BaseScanner(with_metaclass(registry.MetaclassRegistry, object)):
         Returns:
            None if the offset is not a hit, the hit if the hit is correct.
         """
+        self.session.logging.debug('***' * 16)
+        self.session.logging.debug('Check Address, Start Offset: 0x{:>016x}'.format(
+            offset
+        ))
         for check in self.constraints:
             # Ask the check if this offset is possible.
             val = check.check(buffer_as, offset)
-
+            self.session.logging.debug('Current Checker {}, Current Offset: 0x{:>016x} Matched: {}'.format(
+                check.__class__.__name__,
+                offset,
+                'O' if val else 'X'
+            ))
             # Break out on the first negative hit.
             if not val:
                 return
@@ -428,10 +443,20 @@ class BaseScanner(with_metaclass(registry.MetaclassRegistry, object)):
         things up.
         """
         skip = 1
+        self.session.logging.debug('---'*16)
+        self.session.logging.debug('Find Max Skip Length, Start Offset: 0x{:>016x}'.format(
+            offset
+        ))
         for s in self.skippers:
             skip_value = s.skip(buffer_as, offset)
+            self.session.logging.debug(
+                'Current Skip Length={}, Current Skipper Name: {} New Skip Length: {}'.format(
+                    skip,
+                    s.__class__.__name__,
+                    skip_value,
+                ))
             skip = max(skip, skip_value)
-
+        self.session.logging.debug('Done.')
         return skip
 
     overlap = 1024
@@ -463,33 +488,63 @@ class BaseScanner(with_metaclass(registry.MetaclassRegistry, object)):
         if self.constraints is None:
             self.build_constraints()
 
+        self.session.logging.debug(
+            '[BaseScanner] Scan started. start offset: 0x{:>016x}, end offset: 0x{:>016x}'.format(
+                offset,
+                end
+            )
+        )
+
         for buffer_as in BufferASGenerator(
                 self.session, self.address_space, offset, end):
             self.session.report_progress(
                 "Scanning buffer %#x->%#x (%#x)",
                 buffer_as.base_offset, buffer_as.end(),
                 buffer_as.end() - buffer_as.base_offset)
-
+            self.session.logging.debug('==='*16)
             # Now scan within the received buffer.
             scan_offset = buffer_as.base_offset
+            self.session.logging.debug(
+                '[BaseScanner] Buffer Length: {}, Range: 0x{:>016x}-0x{:>016x}'.format(
+                    len(buffer_as),
+                    buffer_as.base_offset,
+                    buffer_as.end(),
+                )
+            )
             while scan_offset < buffer_as.end():
                 # Check the current offset for a match.
+                self.session.logging.debug(
+                    '[BaseScanner] check_addr() start, current offset: 0x{:>016x}'.format(
+                        scan_offset
+                    )
+                )
                 res = self.check_addr(scan_offset, buffer_as=buffer_as)
 
                 # Remove multiple matches in the overlap region which we
                 # have previously reported.
                 if res is not None and scan_offset > last_reported_hit:
                     last_reported_hit = scan_offset
+                    self.session.logging.debug(
+                        '[BaseScanner] Find Matched Pool Header 0x{:>016x}'.format(
+                            scan_offset
+                        )
+                    )
                     yield res
 
-                skip_offset = self.skip(buffer_as, scan_offset)
+                skip_length = self.skip(buffer_as, scan_offset)
+                self.session.logging.debug(
+                    '[BaseScanner] Skip Length: {}, Next Offset: 0x{:>016x}'.format(
+                        skip_length,
+                        scan_offset + min(len(buffer_as), skip_length),
+                    )
+                )
                 #self.session.logging.debug("scan offset: {:02X}, skip value: {}".format(scan_offset, skip_offset))
 
                 # Skip as much data as the skippers tell us to, up to the
                 # end of the buffer.
                 # todo hong 이 부분을 확인 해야함.
                 scan_offset += min(len(buffer_as),
-                                   skip_offset)
+                                   skip_length)
                 #scan_offset += 16
 
 

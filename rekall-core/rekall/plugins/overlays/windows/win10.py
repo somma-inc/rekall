@@ -236,13 +236,13 @@ class _POOL_HEADER(common._POOL_HEADER):
                     #(which is also 0xbad0b0b0).
                     (freed and test_object.TypeIndex <= 2)):
                 yield test_object
-            else:
-                self.obj_session.logging.debug(f"type index {test_object.TypeIndex}, "
-                                               f"object type {test_object.get_object_type()}")
-        # object header를 찾지 못한 경우임. 왜?
-        with open(f'c:\\Temp\\psscan\\{start_offset}_{allocation_size}.dmp', 'wb') as fp:
-            fp.write(cached_data)
-        temp = 0
+        #     else:
+        #         self.obj_session.logging.debug(f"type index {test_object.TypeIndex}, "
+        #                                        f"object type {test_object.get_object_type()}")
+        # # object header를 찾지 못한 경우임. 왜?
+        # with open(f'c:\\Temp\\psscan\\{start_offset}_{allocation_size}.dmp', 'wb') as fp:
+        #     fp.write(cached_data)
+        # temp = 0
 
 
 

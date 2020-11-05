@@ -41,16 +41,16 @@ def find_data_files(source):
     return result
 
 install_requires = [
-    "future",
+    "future==0.16.0",
     "rekall-lib >= 1.7.0rc1, < 1.8",
     "sseclient==0.0.18",
     "rekall-core >= 1.7.0rc1, < 1.8",
-    "requests==2.18.1",
-    "httplib2==0.9.2",
+    "requests==2.20.0",
+    "httplib2==0.18.0",
     "oauth2client==3.0.0",
     "filelock==2.0.6",
     "pathlib==1.0.1",
-    "portpicker==1.1.1"
+    "portpicker==1.1.1",
 ]
 
 data_files = (find_data_files("test_data") +

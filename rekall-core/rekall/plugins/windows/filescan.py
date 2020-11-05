@@ -125,8 +125,8 @@ class PoolScanDriver(common.PoolScanner):
 
             ('CheckPoolType', dict(
                 paged=True, non_paged=True, free=True)),
-
-            ('CheckPoolIndex', dict(value=0)),
+            # todo CheckPoolIndex 용도 확인 필요
+            # ('CheckPoolIndex', dict(value=0)),
             ]
 
 
@@ -258,7 +258,8 @@ class PoolScanMutant(PoolScanDriver):
             ('CheckPoolType', dict(
                 paged=True, non_paged=True, free=True)),
 
-            ('CheckPoolIndex', dict(value=0)),
+            # todo CheckPoolIndex 용도 확인 필요
+            # ('CheckPoolIndex', dict(value=0)),
             ]
 
 
@@ -345,8 +346,8 @@ class PoolScanProcess(common.PoolScanner):
             # paged pool but it's rare to see that.
             ('CheckPoolType', dict(
                 paged=True, non_paged=True, free=True)),
-
-            ('CheckPoolIndex', dict(value=0)),
+            # todo CheckPoolIndex 용도 확인 필요
+            # ('CheckPoolIndex', dict(value=0)),
         ]
 
         # The DTB is page aligned on AMD64 and I386 but aligned to 0x20
@@ -431,9 +432,9 @@ class PSScan(common.WinScanner):
         # Scan each requested run in turn.
         for run in self.generate_memory_ranges():
             self.session.logging.debug(
-                'Run PSScan Plugin, Scan Region={}->{}, Region Type={}'.format(
-                    hex(run.start),
-                    hex(run.end),
+                'Run PSScan Plugin, Scan Region={:>016x}->{:>016x}, Region Type={}'.format(
+                    run.start,
+                    run.end,
                     run.data["type"]
             ))
             # Just grab the AS and scan it using our scanner
