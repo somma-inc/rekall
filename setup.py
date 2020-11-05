@@ -95,12 +95,12 @@ commands = dict(
 # This requires an exact version to ensure that installing the meta package
 # pulls in tested dependencies.
 install_requires = [
-    "wheel==0.34.1",
-    "capstone",
+    # "wheel==0.34.1",
+    # "capstone",
     "rekall-agent >= 1.7.0rc1, < 1.8",
     "rekall-lib >= 1.7.0rc1, < 1.8",
     "rekall-core >= 1.7.0rc1, < 1.8",
-    "ipython==7.14.0",
+    "ipython >= 5.0.0, < 7.0",
 ]
 
 setup(
