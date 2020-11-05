@@ -41,8 +41,6 @@ class WinPsList(common.WinProcessFilter):
 
     table_header = [
         dict(type="_EPROCESS", name="_EPROCESS"),
-        dict(name="ImagePath", width=64, align="r"),
-        dict(name="CmdLine", width=64, align="r"),
         dict(name="ppid", width=6, align="r"),
         dict(name="thread_count", width=6, align="r"),
         dict(name="handle_count", width=8, align="r"),
@@ -61,8 +59,6 @@ class WinPsList(common.WinProcessFilter):
 
     def _row(self, task):
         return dict(_EPROCESS=task,
-                    ImagePath=task.FullPath,
-                    CmdLine=task.Peb.ProcessParameters.CommandLine,
                     ppid=task.InheritedFromUniqueProcessId,
                     thread_count=task.ActiveThreads,
                     handle_count=task.ObjectTable.m("HandleCount"),

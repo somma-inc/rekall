@@ -172,10 +172,6 @@ class StringCheck(ScannerCheck):
 
     def __init__(self, needle=None, needle_offset=0, **kwargs):
         super(StringCheck, self).__init__(**kwargs)
-        if isinstance(needle, str):
-            needle = needle.encode('utf-8')
-        elif not isinstance(needle, bytes):
-            raise TypeError('needle must be str or bytes')
         self.needle = needle
         self.needle_offset = needle_offset
 

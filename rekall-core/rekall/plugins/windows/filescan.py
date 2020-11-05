@@ -361,19 +361,11 @@ class PoolScanProcess(common.PoolScanner):
             # Also fetch freed objects.
             for object_header in pool_obj.IterObject("Process", freed=True):
                 eprocess = object_header.Body.cast("_EPROCESS")
-                # DirectoryTableBase 값이 0인 경우도 존재함
-                # TODO 해당 문제는 확인 필요
                 if eprocess.Pcb.DirectoryTableBase == 0:
-                    self.session.logging.debug('DirectoryTableBase is zero, pid={}, image={}'.format(
-                        eprocess.pid,
-                        eprocess.FullPath
-                    ))
                     continue
 
-                # Windows 10 1903 이후 버전에서 테스트 했을 때 신기하게도..dtb_alignment가 맞지 않다
-                # 커널 디버깅을 해봐도 마찬가지임.
-                # if eprocess.Pcb.DirectoryTableBase % self.dtb_alignment != 0:
-                #     continue
+                if eprocess.Pcb.DirectoryTableBase % self.dtb_alignment != 0:
+                    continue
 
                 # Pointers must point to the kernel part of the address space.
                 list_head = eprocess.ActiveProcessLinks
@@ -425,13 +417,6 @@ class PSScan(common.WinScanner):
 
         # Scan each requested run in turn.
         for run in self.generate_memory_ranges():
-            # refac - somma
-            # self.generate_memory_ranges() 가 리턴하는 주소들 확인해보기
-            # pslist 에서 찾은 eprocess주소 영역을 포함하는 range 가 리턴되는지 확인 필요
-            self.session.logging.debug('somma, run={}->{}, type={}'
-                                       .format(hex(run.start),
-                                               hex(run.end),
-                                               run.data["type"]))
             # Just grab the AS and scan it using our scanner
             scanner = PoolScanProcess(session=self.session,
                                       profile=self.profile,
