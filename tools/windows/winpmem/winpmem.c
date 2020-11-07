@@ -62,7 +62,7 @@ NTSTATUS AddMemoryRanges(struct PmemMemoryInfo *info, int len) {
   int required_length;
 
   // Enumerate address ranges.
-  MmPhysicalMemoryRange = Pmem_KernelExports.MmGetPhysicalMemoryRanges();
+  MmPhysicalMemoryRange = MmGetPhysicalMemoryRanges();
 
   if (MmPhysicalMemoryRange == NULL) {
     return STATUS_ACCESS_DENIED;
@@ -264,44 +264,21 @@ NTSTATUS wddDispatchDeviceControl(IN PDEVICE_OBJECT DeviceObject,
 
       switch(mode) {
       case ACQUISITION_MODE_PHYSICAL_MEMORY:
-        // These are all the requirements for this method.
-        if (!Pmem_KernelExports.MmGetPhysicalMemoryRanges) {
-          WinDbgPrint("Kernel APIs required for this method are not "
-                      "available.");
-          status = STATUS_UNSUCCESSFUL;
-        } else {
-          WinDbgPrint("Using physical memory device for acquisition.\n");
-          status = STATUS_SUCCESS;
-	  ext->mode = mode;
-        };
+        WinDbgPrint("Using physical memory device for acquisition.\n");
+        status = STATUS_SUCCESS;
+		ext->mode = mode;
         break;
 
       case ACQUISITION_MODE_MAP_IO_SPACE:
-        if (!Pmem_KernelExports.MmGetPhysicalMemoryRanges ||
-            !Pmem_KernelExports.MmMapIoSpace ||
-            !Pmem_KernelExports.MmUnmapIoSpace) {
-          WinDbgPrint("Kernel APIs required for this method are not "
-                      "available.");
-          status = STATUS_UNSUCCESSFUL;
-        } else {
-          WinDbgPrint("Using MmMapIoSpace for acquisition.\n");
-          status = STATUS_SUCCESS;
-	  ext->mode = mode;
-        };
+        WinDbgPrint("Using MmMapIoSpace for acquisition.\n");
+        status = STATUS_SUCCESS;
+		ext->mode = mode;
         break;
 
       case ACQUISITION_MODE_PTE_MMAP:
-        if (!Pmem_KernelExports.MmGetVirtualForPhysical ||
-            !Pmem_KernelExports.MmGetPhysicalMemoryRanges ||
-            !ext->pte_mmapper) {
-          WinDbgPrint("Kernel APIs required for this method are not "
-                      "available.");
-          status = STATUS_UNSUCCESSFUL;
-        } else {
-          WinDbgPrint("Using PTE Remapping for acquisition.\n");
-          status = STATUS_SUCCESS;
-	  ext->mode = mode;
-        };
+        WinDbgPrint("Using PTE Remapping for acquisition.\n");
+		status = STATUS_SUCCESS;
+		ext->mode = mode;
         break;
 
 #if 0
@@ -368,12 +345,6 @@ NTSTATUS DriverEntry (IN PDRIVER_OBJECT DriverObject,
 
   WinDbgPrint("Copyright (c) 2018, Velocidex Innovations <mike@velocidex.com>\n");
   WinDbgPrint("Copyright (c) 2017, Google Inc.\n");
-
-  // Initialize import tables:
-  if(PmemGetProcAddresses() != STATUS_SUCCESS) {
-    WinDbgPrint("Failed to initialize import table. Aborting.\n");
-    goto error;
-  };
 
   RtlInitUnicodeString (&DeviceName, L"\\Device\\" PMEM_DEVICE_NAME);
 

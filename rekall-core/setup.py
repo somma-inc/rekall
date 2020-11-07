@@ -157,8 +157,7 @@ class CleanCommand(Command):
         if os.getcwd() != self.cwd:
             raise RuntimeError('Must be in package root: %s' % self.cwd)
 
-        # somma
-        # os.system('rm -rf ./build ./dist')
+        # Bug fix for windows system (somma)
         remove_directory(os.path.join(os.getcwd(), 'build'))
         remove_directory(os.path.join(os.getcwd(), 'dist'))
 
