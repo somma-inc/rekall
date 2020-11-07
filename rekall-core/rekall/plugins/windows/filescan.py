@@ -393,6 +393,13 @@ class PoolScanProcess(common.PoolScanner):
                                                                                                                         list_head.Flink.value,
                                                                                                                         list_head.Blink.value))
                     continue
+
+                # Enhancement (somma)
+                if eprocess.pid % 4 != 0:
+                    self.session.logging.debug('[!] eprocess=0x{:>016x}, pid={}, invalid pid'.format(eprocess.obj_offset,
+                                                                                                     eprocess.pid))
+                    continue
+
                 yield pool_obj, eprocess
 
 
