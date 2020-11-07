@@ -319,8 +319,7 @@ class _POOL_HEADER(common._POOL_HEADER):
             while bit_position > 0:
                 # This is the optional header with the largest offset.
                 if bit_position & i:
-                    self.lookup[i] = ObpInfoMaskToOffset[
-                        i & (bit_position | (bit_position - 1))]
+                    self.lookup[i] = ObpInfoMaskToOffset[i & (bit_position | (bit_position - 1))]
 
                     break
                 bit_position >>= 1
@@ -360,8 +359,7 @@ class _POOL_HEADER(common._POOL_HEADER):
         # values.
 
         # This is the offset within _OBJECT_HEADER of InfoMask.
-        info_mask_offset = self.obj_profile.get_obj_offset(
-            "_OBJECT_HEADER", "InfoMask")
+        info_mask_offset = self.obj_profile.get_obj_offset("_OBJECT_HEADER", "InfoMask")
 
         # Build the cache if needed.
         if not self.lookup:
@@ -393,24 +391,12 @@ class _POOL_HEADER(common._POOL_HEADER):
                 offset=i, vm=cached_vm)
 
             if test_object.is_valid():
-                # refac
-                '''
                 if (type is None or
                         test_object.get_object_type() == type or
                         # Freed objects point to index 1
                         #(which is also 0xbad0b0b0).
                         (freed and test_object.TypeIndex <= 2)):
                     yield test_object
-                '''
-                obj_type = test_object.get_object_type()
-
-                if type is None:
-                    yield test_object
-                elif type == obj_type:
-                    yield test_object
-                elif freed and test_object.TypeIndex <= 2:
-                    yield test_object
-
 
 
 class ObjectTypeMapHook(kb.ParameterHook):
