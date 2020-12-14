@@ -1,0 +1,55 @@
+a    offset_p            name          pid     offset_v     ppid       pdb       stat       create_time               exit_time        
+- -------------- -------------------- ----- -------------- ------ -------------- ---- ------------------------ ------------------------
+  0xbd0581e83040 System                   4 0xbd0581e83040      0       0x1aa002 P    2020-09-10 01:48:51Z                             
+  0xbd0581ee3040 MemCompression        1484 0xbd0581ee3040      4      0x4dad002 P    2020-09-10 01:49:06Z                             
+  0xbd0581ef7080 svchost.exe           1400 0xbd0581ef7080    672     0x13113002 P    2020-09-10 01:49:05Z                             
+  0xbd058817a080 winlogon.exe           632 0xbd058817a080    528      0xc1bd002 P    2020-09-10 01:48:57Z                             
+  0xbd0588921180 fontdrvhost.ex         780 0xbd0588921180    632     0x2749a002 P    2020-09-10 01:48:58Z                             
+  0xbd0588923280 svchost.exe            816 0xbd0588923280    672      0xda5d002 P    2020-09-10 01:48:58Z                             
+  0xbd05889c2300 svchost.exe            924 0xbd05889c2300    672     0x1090b002 P    2020-09-10 01:49:00Z                             
+  0xbd058901f080 dwm.exe               1004 0xbd058901f080    632     0x137c5002 P    2020-09-10 01:49:01Z                             
+  0xbd05890c3300 svchost.exe            908 0xbd05890c3300    672     0x14309002 P    2020-09-10 01:49:02Z                             
+  0xbd058919e300 svchost.exe           1172 0xbd058919e300    672     0x162cc002 P    2020-09-10 01:49:03Z                             
+  0xbd05893b9080 msvsmon.exe           1052 0xbd05893b9080   7108     0x77fdc002 P    2020-09-11 04:10:07Z     2020-09-11 04:26:38Z    
+  0xbd05894cc300 svchost.exe           1748 0xbd05894cc300    672     0x1fee7002 P    2020-09-10 01:49:11Z                             
+  0xbd058956e140 svchost.exe           1772 0xbd058956e140    672     0x1ee67002 P    2020-09-10 01:49:12Z                             
+  0xbd05896b6240 spoolsv.exe           1948 0xbd05896b6240    672     0x20a07002 P    2020-09-10 01:49:16Z                             
+  0xbd0589749300 svchost.exe           2024 0xbd0589749300    672     0x2362f002 P    2020-09-10 01:49:17Z                             
+  0xbd0589850080 msdtc.exe             3080 0xbd0589850080    672     0x48229002 P    2020-09-10 01:49:46Z                             
+  0xbd058997b080 dasHost.exe           2356 0xbd058997b080   1044     0x79b4f002 P    2020-09-10 01:49:32Z                             
+  0xbd0589987280 svchost.exe           2264 0xbd0589987280    672     0x28034002 P    2020-09-10 01:49:31Z                             
+  0xbd05899ce2c0 vmtoolsd.exe          2376 0xbd05899ce2c0    672     0x26d4a002 P    2020-09-10 01:49:32Z                             
+  0xbd05899d2340 VGAuthService.        2368 0xbd05899d2340    672     0x24a53002 P    2020-09-10 01:49:32Z                             
+  0xbd0589a6b340 MsMpEng.exe           2408 0xbd0589a6b340    672     0x27248002 P    2020-09-10 01:49:32Z                             
+  0xbd0589ab0280 svchost.exe           2508 0xbd0589ab0280    672     0x29bd1002 P    2020-09-10 01:49:33Z                             
+  0xbd0589b380c0 conhost.exe           5072 0xbd0589b380c0   7076      0xcec7002 P    2020-09-11 05:39:07Z                             
+  0xbd0589c50080 dllhost.exe           2944 0xbd0589c50080    672     0x2e3ac002 P    2020-09-10 01:49:40Z                             
+  0xbd0589c51080 WmiPrvSE.exe          2952 0xbd0589c51080    816     0x2e32b002 P    2020-09-10 01:49:40Z                             
+  0xbd058a007080 NisSrv.exe            3320 0xbd058a007080    672     0x2c679002 P    2020-09-10 01:49:47Z                             
+  0xbd058a0c3080 sihost.exe            3504 0xbd058a0c3080    760     0x3c622002 P    2020-09-10 01:49:49Z                             
+  0xbd058a0c4080 svchost.exe           3524 0xbd058a0c4080    672     0x3d085002 P    2020-09-10 01:49:49Z                             
+  0xbd058a1363c0 ctfmon.exe            3784 0xbd058a1363c0   1044     0x3eedc002 P    2020-09-10 01:49:50Z                             
+  0xbd058a2ae080 explorer.exe          4008 0xbd058a2ae080   3904     0x400f4002 P    2020-09-10 01:49:52Z                             
+  0xbd058a4ae280 SearchIndexer.        3012 0xbd058a4ae280    672     0x4c004002 P    2020-09-10 01:49:55Z                             
+  0xbd058a5e4080 SearchUI.exe          4744 0xbd058a5e4080    816     0x56f25002 P    2020-09-10 01:50:03Z                             
+  0xbd058a66d080 StartMenuExper        4444 0xbd058a66d080    816     0x522db002 P    2020-09-10 01:50:01Z                             
+  0xbd058a887080 backgroundTask        5436 0xbd058a887080    816     0x5fc23002 P    2020-09-10 01:50:13Z     2020-09-10 01:53:13Z    
+  0xbd058a961440 RuntimeBroker.        4924 0xbd058a961440    816     0x5729d002 P    2020-09-10 01:50:04Z                             
+  0xbd058a961660                          0 0xbd058a961660 367326 0xffffbd058abda688                                                       
+                                                             8224                                                                          
+  0xbd058aaf4080 SystemSettings        5564 0xbd058aaf4080    816     0x4abf6002 P    2020-09-10 01:51:22Z                             
+  0xbd058ac3a080 RuntimeBroker.        5320 0xbd058ac3a080    816     0x67ba5002 P    2020-09-10 01:50:12Z                             
+  0xbd058aeb2080 SecurityHealth        5908 0xbd058aeb2080   4008     0x3ce76002 P    2020-09-10 01:50:19Z                             
+  0xbd058aebe280 SecurityHealth        5936 0xbd058aebe280    672     0x68dc4002 P    2020-09-10 01:50:19Z                             
+  0xbd058aebf080 msvsmon.exe           4616 0xbd058aebf080   6376     0x7462f002 P    2020-09-11 03:04:59Z     2020-09-11 03:09:27Z    
+  0xbd058aec1080 OneDrive.exe          4848 0xbd058aec1080   4008     0x75c38002 P    2020-09-10 01:50:24Z                             
+  0xbd058aec8080 vm3dservice.ex        6012 0xbd058aec8080   4008     0x6b25d002 P    2020-09-10 01:50:19Z                             
+  0xbd058ba0c280 svchost.exe            932 0xbd058ba0c280    672     0x155c2002 P    2020-09-10 01:51:26Z                             
+  0xbd058baa8080 msvsmon.exe           5948 0xbd058baa8080   4452     0x105c6002 P    2020-09-11 02:58:38Z     2020-09-11 03:02:57Z    
+  0xbd058c4a70c0 msvsmon.exe           5840 0xbd058c4a70c0   3804     0x63387002 P    2020-09-11 04:31:34Z                             
+  0xbd058c4b44c0 msvsmon.exe           6536 0xbd058c4b44c0   5948     0x64a80002 P    2020-09-11 03:01:41Z     2020-09-11 03:04:44Z    
+  0xbd058c8d84c0 msvsmon.exe           6376 0xbd058c8d84c0   6536      0xabdc002 P    2020-09-11 03:03:28Z     2020-09-11 03:06:24Z    
+  0xbd058ce10080 msedge.exe            2004 0xbd058ce10080   6944     0x4bd8e002 P    2020-09-11 03:05:45Z     2020-09-11 03:05:46Z    
+  0xbd058e22f480 msvsmon.exe           3804 0xbd058e22f480   1052     0x12c2e002 P    2020-09-11 04:20:41Z     2020-09-11 04:32:01Z    
+  0xbd0595a904c0 svchost.exe           1760 0xbd0595a904c0    672     0x67f69002 P    2020-09-13 12:03:53Z                             
+  0xbd0595aa3440 RuntimeBroker.        3340 0xbd0595aa3440    816     0x506e1002 P    2020-09-12 12:58:24Z                             

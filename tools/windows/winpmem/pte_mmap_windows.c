@@ -88,7 +88,7 @@ static void *pte_phys_to_virt(PHYS_ADDR address) {
   phys_address.QuadPart = address;
   //return phys_to_virt(address);
   // TODO(scudette): Use PFNDB here.
-  return Pmem_KernelExports.MmGetVirtualForPhysical(phys_address);
+  return MmGetVirtualForPhysical(phys_address);
 }
 
 // Flushes the tlb entry for a specific page.

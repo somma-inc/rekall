@@ -1,0 +1,106 @@
+  _EPROCESS            name          pid   ppid  thread_count handle_count session_id wow64    process_create_time       process_exit_time    
+-------------- -------------------- ----- ------ ------------ ------------ ---------- ------ ------------------------ ------------------------
+0xbd0581e83040 System                   4      0          136            -          - False  2020-09-10 01:48:51Z     -                       
+0xbd0581ef0080 Registry               128      4            4            -          - False  2020-09-10 01:48:20Z     -                       
+0xbd058cb744c0 Microsoft.Msn.         248    816           28            -          0 False  2020-09-12 12:58:22Z     -                       
+0xbd058acad080 Microsoft.Phot         332    816           16            -          1 False  2020-09-10 02:19:51Z     -                       
+0xbd0584911400 smss.exe               376      4            2            -          - False  2020-09-10 01:48:51Z     -                       
+0xbd0589b40080 msedge.exe             384   4008            0            -          1 False  2020-09-11 03:00:12Z     2020-09-11 03:00:40Z    
+0xbd05849d1080 csrss.exe              460    448           10            -          0 False  2020-09-10 01:48:56Z     -                       
+0xbd0588865080 wininit.exe            536    448            2            -          0 False  2020-09-10 01:48:56Z     -                       
+0xbd058886c140 csrss.exe              552    528           12            -          1 False  2020-09-10 01:48:56Z     -                       
+0xbd058a3430c0 svchost.exe            584    672            7            -          1 False  2020-09-10 01:49:54Z     -                       
+0xbd058817a080 winlogon.exe           632    528            4            -          1 False  2020-09-10 01:48:57Z     -                       
+0xbd05888b40c0 services.exe           672    536            7            -          0 False  2020-09-10 01:48:57Z     -                       
+0xbd05888b5080 lsass.exe              680    536            7            -          0 False  2020-09-10 01:48:57Z     -                       
+0xbd05890b2300 svchost.exe            700    672           18            -          0 False  2020-09-10 01:49:02Z     -                       
+0xbd058a7ec080 svchost.exe            712    672            3            -          0 False  2020-09-10 02:19:58Z     -                       
+0xbd05890a7280 svchost.exe            760    672           62            -          0 False  2020-09-10 01:49:02Z     -                       
+0xbd0588921180 fontdrvhost.ex         780    632            5            -          1 False  2020-09-10 01:48:58Z     -                       
+0xbd05888eb180 fontdrvhost.ex         788    536            5            -          0 False  2020-09-10 01:48:58Z     -                       
+0xbd0588923280 svchost.exe            816    672           22            -          0 False  2020-09-10 01:48:58Z     -                       
+0xbd05890c3300 svchost.exe            908    672           18            -          0 False  2020-09-10 01:49:02Z     -                       
+0xbd05889c2300 svchost.exe            924    672           11            -          0 False  2020-09-10 01:49:00Z     -                       
+0xbd058ba0c280 svchost.exe            932    672            4            -          0 False  2020-09-10 01:51:26Z     -                       
+0xbd058901f080 dwm.exe               1004    632           14            -          1 False  2020-09-10 01:49:01Z     -                       
+0xbd05890210c0 LogonUI.exe           1012    632            0            -          1 False  2020-09-10 01:49:01Z     2020-09-10 13:23:50Z    
+0xbd05890e2280 svchost.exe           1044    672           17            -          0 False  2020-09-10 01:49:02Z     -                       
+0xbd05893b9080 msvsmon.exe           1052   7108            0            -          1 False  2020-09-11 04:10:07Z     2020-09-11 04:26:38Z    
+0xbd058919e300 svchost.exe           1172    672           22            -          0 False  2020-09-10 01:49:03Z     -                       
+0xbd058a9a6080 RuntimeBroker.        1232    816            5            -          1 False  2020-09-10 02:19:56Z     -                       
+0xbd05892bb300 svchost.exe           1372    672           20            -          0 False  2020-09-10 01:49:05Z     -                       
+0xbd0581ef7080 svchost.exe           1400    672            6            -          0 False  2020-09-10 01:49:05Z     -                       
+0xbd0581ee3040 MemCompression        1484      4           50            -          - False  2020-09-10 01:49:06Z     -                       
+0xbd0589e54080 StandardCollec        1528    672            2            -          0 False  2020-09-11 02:58:38Z     -                       
+0xbd0594a8b4c0 python.exe            1616   2332            5            -          1 False  2020-09-13 09:54:01Z     -                       
+0xbd0581f60340 svchost.exe           1676    672            8            -          0 False  2020-09-10 01:49:08Z     -                       
+0xbd05894cc300 svchost.exe           1748    672            5            -          0 False  2020-09-10 01:49:11Z     -                       
+0xbd058a97c4c0 ShellExperienc        1768    816           13            -          1 False  2020-09-11 02:55:11Z     -                       
+0xbd058956e140 svchost.exe           1772    672            7            -          0 False  2020-09-10 01:49:12Z     -                       
+0xbd058939b080 dllhost.exe           1936    816            5            -          1 False  2020-09-11 02:56:19Z     -                       
+0xbd05896b6240 spoolsv.exe           1948    672            7            -          0 False  2020-09-10 01:49:16Z     -                       
+0xbd058ce10080 msedge.exe            2004   6944            0            -          1 False  2020-09-11 03:05:45Z     2020-09-11 03:05:46Z    
+0xbd0589745380 svchost.exe           2012    672           13            -          0 False  2020-09-10 01:49:17Z     -                       
+0xbd0589749300 svchost.exe           2024    672           12            -          0 False  2020-09-10 01:49:17Z     -                       
+0xbd0589987280 svchost.exe           2264    672           13            -          0 False  2020-09-10 01:49:31Z     -                       
+0xbd058a386080 msedge.exe            2328    384            0            -          1 False  2020-09-11 03:00:13Z     2020-09-11 03:00:40Z    
+0xbd0595a904c0 rekall.exe            2332   7076            3            -          1 False  2020-09-13 09:54:01Z     -                       
+0xbd058997b080 dasHost.exe           2356   1044            3            -          0 False  2020-09-10 01:49:32Z     -                       
+0xbd05899d2340 VGAuthService.        2368    672            2            -          0 False  2020-09-10 01:49:32Z     -                       
+0xbd05899ce2c0 vmtoolsd.exe          2376    672           11            -          0 False  2020-09-10 01:49:32Z     -                       
+0xbd0589a6b340 MsMpEng.exe           2408    672           24            -          0 False  2020-09-10 01:49:32Z     -                       
+0xbd0589ab0280 svchost.exe           2508    672           13            -          0 False  2020-09-10 01:49:33Z     -                       
+0xbd058b57f080 WindowsInterna        2928    816           11            -          1 False  2020-09-10 13:23:48Z     -                       
+0xbd0589c50080 dllhost.exe           2944    672           10            -          0 False  2020-09-10 01:49:40Z     -                       
+0xbd0589c51080 WmiPrvSE.exe          2952    816           11            -          0 False  2020-09-10 01:49:40Z     -                       
+0xbd058a4ae280 SearchIndexer.        3012    672           18            -          0 False  2020-09-10 01:49:55Z     -                       
+0xbd0589850080 msdtc.exe             3080    672            9            -          0 False  2020-09-10 01:49:46Z     -                       
+0xbd058a007080 NisSrv.exe            3320    672            7            -          0 False  2020-09-10 01:49:47Z     -                       
+0xbd0595aa3440 RuntimeBroker.        3340    816            4            -          1 False  2020-09-12 12:58:24Z     -                       
+0xbd0589be10c0 UserOOBEBroker        3344    816            1            -          1 False  2020-09-10 01:51:23Z     -                       
+0xbd0592b89080 TOTALCMD64.EXE        3356   4008            7            -          1 False  2020-09-13 09:21:39Z     -                       
+0xbd058aca1080 RuntimeBroker.        3452    816            0            -          1 False  2020-09-10 01:51:12Z     2020-09-11 02:55:52Z    
+0xbd058a0c3080 sihost.exe            3504    760           12            -          1 False  2020-09-10 01:49:49Z     -                       
+0xbd058a0c4080 svchost.exe           3524    672           13            -          1 False  2020-09-10 01:49:49Z     -                       
+0xbd058937c080 sppsvc.exe            3576    672            3            -          0 False  2020-09-10 01:51:37Z     -                       
+0xbd058a0e3440 taskhostw.exe         3660    760            9            -          1 False  2020-09-10 01:49:50Z     -                       
+0xbd0589256240 svchost.exe           3696    672            8            -          0 False  2020-09-10 01:51:37Z     -                       
+0xbd058a1363c0 ctfmon.exe            3784   1044            8            -          1 False  2020-09-10 01:49:50Z     -                       
+0xbd058e22f480 msvsmon.exe           3804   1052            0            -          1 False  2020-09-11 04:20:41Z     2020-09-11 04:32:01Z    
+0xbd058a1a8080 userinit.exe          3904    632            0            -          1 False  2020-09-10 01:49:51Z     2020-09-10 01:50:22Z    
+0xbd058d5f2080 SecurityHealth        3968    816            1            -          1 False  2020-09-13 05:49:08Z     -                       
+0xbd058a2ae080 explorer.exe          4008   3904           48            -          1 False  2020-09-10 01:49:52Z     -                       
+0xbd05893bd080 YourPhone.exe         4108    816           16            -          1 False  2020-09-12 15:31:01Z     -                       
+0xbd058a4b4080 RuntimeBroker.        4216    816            1            -          1 False  2020-09-10 01:50:47Z     -                       
+0xbd058a66d080 StartMenuExper        4444    816           14            -          1 False  2020-09-10 01:50:01Z     -                       
+0xbd058ab5e080 msvsmon.exe           4452   5660            0            -          1 False  2020-09-10 13:23:53Z     2020-09-11 03:01:18Z    
+0xbd058a671440 RuntimeBroker.        4560    816            3            -          1 False  2020-09-10 01:50:02Z     -                       
+0xbd058aebf080 msvsmon.exe           4616   6376            0            -          1 False  2020-09-11 03:04:59Z     2020-09-11 03:09:27Z    
+0xbd058ab5f080 msvsmon.exe           4680   5660            3            -          1 True   2020-09-10 13:23:53Z     -                       
+0xbd058a4bc080 RuntimeBroker.        4720    816            2            -          1 False  2020-09-12 15:31:01Z     -                       
+0xbd058a5e4080 SearchUI.exe          4744    816           32            -          1 False  2020-09-10 01:50:03Z     -                       
+0xbd058aec1080 OneDrive.exe          4848   4008           15            -          1 True   2020-09-10 01:50:24Z     -                       
+0xbd058a961440 RuntimeBroker.        4924    816            8            -          1 False  2020-09-10 01:50:04Z     -                       
+0xbd0589b380c0 conhost.exe           5072   7076            4            -          1 False  2020-09-11 05:39:07Z     -                       
+0xbd058cac9080 RuntimeBroker.        5080    816            3            -          1 False  2020-09-11 02:55:11Z     -                       
+0xbd058abda440 SettingSyncHos        5136    816           11            -          1 False  2020-09-10 01:50:10Z     -                       
+0xbd058ac1c4c0 LockApp.exe           5172    816           11            -          1 False  2020-09-10 01:50:10Z     -                       
+0xbd058ac3a080 RuntimeBroker.        5320    816            4            -          1 False  2020-09-10 01:50:12Z     -                       
+0xbd058a887080 backgroundTask        5436    816            0            -          1 False  2020-09-10 01:50:13Z     2020-09-10 01:53:13Z    
+0xbd058a29e080 msedge.exe            5444    384            0            -          1 False  2020-09-11 03:00:14Z     2020-09-11 03:00:40Z    
+0xbd058b0d6080 ApplicationFra        5456    816            3            -          1 False  2020-09-10 01:51:11Z     -                       
+0xbd0589380080 SgrmBroker.exe        5524    672            5            -          0 False  2020-09-10 01:51:37Z     -                       
+0xbd058aaf4080 SystemSettings        5564    816           19            -          1 False  2020-09-10 01:51:22Z     -                       
+0xbd058bc81080 msvsmon.exe           5616   4616            0            -          1 False  2020-09-11 03:06:57Z     2020-09-11 03:11:25Z    
+0xbd058c31b080 msvsmon.exe           5660   4008            2            -          1 False  2020-09-10 13:23:52Z     -                       
+0xbd058c4a70c0 msvsmon.exe           5840   3804            3            -          1 False  2020-09-11 04:31:34Z     -                       
+0xbd058aeb2080 SecurityHealth        5908   4008            1            -          1 False  2020-09-10 01:50:19Z     -                       
+0xbd058aebe280 SecurityHealth        5936    672            8            -          0 False  2020-09-10 01:50:19Z     -                       
+0xbd058baa8080 msvsmon.exe           5948   4452            0            -          1 False  2020-09-11 02:58:38Z     2020-09-11 03:02:57Z    
+0xbd058aec8080 vm3dservice.ex        6012   4008            1            -          1 False  2020-09-10 01:50:19Z     -                       
+0xbd058aafa080 vmtoolsd.exe          6056   4008            8            -          1 False  2020-09-10 01:50:20Z     -                       
+0xbd058c8d84c0 msvsmon.exe           6376   6536            0            -          1 False  2020-09-11 03:03:28Z     2020-09-11 03:06:24Z    
+0xbd058c4b44c0 msvsmon.exe           6536   5948            0            -          1 False  2020-09-11 03:01:41Z     2020-09-11 03:04:44Z    
+0xbd058b579080 msedge.exe            6944   4008            0            -          1 False  2020-09-11 03:05:24Z     2020-09-11 03:05:46Z    
+0xbd058392c080 cmd.exe               7076   4008            1            -          1 False  2020-09-11 05:39:07Z     -                       
+0xbd0581ef1080 msvsmon.exe           7108   5616            0            -          1 False  2020-09-11 03:10:56Z     2020-09-11 04:16:05Z    
