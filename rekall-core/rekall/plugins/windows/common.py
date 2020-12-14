@@ -35,6 +35,7 @@ from rekall.plugins.common import scanners
 from rekall_lib import registry
 from rekall_lib import utils
 
+from rekall.plugins.overlays.windows import win10_memcompression
 
 # Windows kernel pdb filenames.
 KERNEL_NAMES = set(
@@ -187,6 +188,8 @@ class WinFindDTB(AbstractWindowsCommandPlugin, core.FindDTB):
                  kuser_shared.NtMinorVersion not in [0, 1, 2, 3])):
             return
 
+        self.session.SetCache("build_number", kuser_shared.NtBuildNumber,
+                              volatile=False)
         self.session.SetCache("dtb", dtb)
 
         return self.CreateAS(dtb)
@@ -196,11 +199,16 @@ class WinFindDTB(AbstractWindowsCommandPlugin, core.FindDTB):
         # The virtual address space implementation is chosen by the profile.
         architecture = self.profile.metadata("arch")
         performance = self.session.GetParameter("performance")
+        build_nr = self.session.GetCache("build_number")
+
         if architecture == "AMD64":
             # If the user prefers performance we will use the simplest Address
             # Space Implementation.
             if performance == "fast":
                 impl = "AMD64PagedMemory"
+            elif win10_memcompression.initialize_win10_mem_compression(
+                    self.profile, build_nr):
+                impl = "WindowsAMD64CompressedPagedMemory"
             else:
                 impl = "WindowsAMD64PagedMemory"
 
@@ -208,6 +216,9 @@ class WinFindDTB(AbstractWindowsCommandPlugin, core.FindDTB):
         elif architecture == "I386" and self.profile.metadata("pae"):
             if performance == "fast":
                 impl = "IA32PagedMemoryPae"
+            elif win10_memcompression.initialize_win10_mem_compression(
+                    self.profile, build_nr):
+                impl = "WindowsIA32CompressedPagedMemoryPae"
             else:
                 impl = "WindowsIA32PagedMemoryPae"
 
@@ -336,9 +347,17 @@ class PoolScanner(scan.BaseScanner):
         """Yields instances of _POOL_HEADER which potentially match."""
 
         maxlen = maxlen or self.session.profile.get_constant("MaxPointer")
+        self.session.logging.debug("[Pool Scanner] Start Offset = 0x{:>016x}".format(offset))
         for hit in super(PoolScanner, self).scan(offset=offset, maxlen=maxlen):
-            yield self.session.profile._POOL_HEADER(
-                vm=self.address_space, offset=hit)
+            pool_obj = self.session.profile._POOL_HEADER(vm=self.address_space, offset=hit)
+            self.session.logging.debug(
+                "[Pool Scanner] Find Pool Header!! Offset = 0x{:>016x}, Block Size={} Pool Size={}".format(
+                    hit,
+                    pool_obj.BlockSize,
+                    pool_obj.BlockSize * 16,
+                )
+            )
+            yield pool_obj
 
 
 class KDBGHook(AbstractWindowsParameterHook):

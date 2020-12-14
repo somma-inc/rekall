@@ -160,9 +160,8 @@ class WindowsGUIDProfile(RepositoryPlugin):
         repository = self.args.repository
         fetch_pdb = self.session.plugins.fetch_pdb(
             pdb_filename=pdb_filename, guid=guid)
-        with fetch_pdb.FetchPDBFile() as fd:
-            data = fd.read()
-            repository.StoreData("src/pdb/%s.pdb" % guid, data, raw=True)
+        data = fetch_pdb.FetchPDBFile()
+        repository.StoreData("src/pdb/%s.pdb" % guid, data, raw=True)
 
     def ParsePDB(self, guid, original_pdb_filename):
         repository = self.args.repository

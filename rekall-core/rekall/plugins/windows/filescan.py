@@ -125,8 +125,8 @@ class PoolScanDriver(common.PoolScanner):
 
             ('CheckPoolType', dict(
                 paged=True, non_paged=True, free=True)),
-
-            ('CheckPoolIndex', dict(value=0)),
+            # todo CheckPoolIndex 용도 확인 필요
+            # ('CheckPoolIndex', dict(value=0)),
             ]
 
 
@@ -258,7 +258,8 @@ class PoolScanMutant(PoolScanDriver):
             ('CheckPoolType', dict(
                 paged=True, non_paged=True, free=True)),
 
-            ('CheckPoolIndex', dict(value=0)),
+            # todo CheckPoolIndex 용도 확인 필요
+            # ('CheckPoolIndex', dict(value=0)),
             ]
 
 
@@ -325,14 +326,12 @@ class PoolScanProcess(common.PoolScanner):
     """PoolScanner for File objects"""
 
     # Kernel addresses are above this value.
-    # 1: kd > eq
-    # nt!MmSystemRangeStart
-    # fffff805`28d9b678    ffff8000`00000000
     kernel = 0x80000000
 
     def __init__(self, **kwargs):
         super(PoolScanProcess, self).__init__(**kwargs)
-        self.kernel = self.profile.get_constant_object("MmSystemRangeStart", "Pointer").v() or 0x80000000
+        self.kernel = self.profile.get_constant_object(
+            "MmSystemRangeStart", "Pointer").v() or 0x80000000
 
         self.checks = [
             # Must have the right pool tag.
@@ -340,14 +339,14 @@ class PoolScanProcess(common.PoolScanner):
                 tag=self.profile.get_constant("EPROCESS_POOLTAG"))),
 
             # Must be large enough for an _EPROCESS.
-            ('CheckPoolSize', dict(min_size=self.profile.get_obj_size("_EPROCESS"))),
+            ('CheckPoolSize', dict(min_size=self.profile.get_obj_size(
+                "_EPROCESS"))),
 
             # It seems that on old XP versions _EPROCESS was allocated from
             # paged pool but it's rare to see that.
             ('CheckPoolType', dict(
-                paged=True, non_paged=True, free=True))
-
-            # Bug fix (somma) - Do not use this
+                paged=True, non_paged=True, free=True)),
+            # todo CheckPoolIndex 용도 확인 필요
             # ('CheckPoolIndex', dict(value=0)),
         ]
 
@@ -361,43 +360,31 @@ class PoolScanProcess(common.PoolScanner):
     def scan(self, **kwargs):
         for pool_obj in super(PoolScanProcess, self).scan(**kwargs):
             # Also fetch freed objects.
-            # pool_obj 는 POOL_HEADER 객체임
             for object_header in pool_obj.IterObject("Process", freed=True):
                 eprocess = object_header.Body.cast("_EPROCESS")
-                self.session.logging.debug('[!] pool=0x{:016x}, eprocess=0x{:016x}'
-                                           .format(int(object_header),
-                                                   int(eprocess)))
-
                 if eprocess.Pcb.DirectoryTableBase == 0:
-                    self.session.logging.debug('[!] eprocess=0x{:>016x}, pid={}, {}, no dtb'
-                                               .format(eprocess.obj_offset,
-                                                       eprocess.pid,
-                                                       eprocess.ImageFileName))
+                    self.session.logging.debug(
+                        'no dtb, skip eprocess=0x{:>016x}, pid={}, {}'.format(
+                            eprocess.obj_offset,
+                            eprocess.pid,
+                            eprocess.ImageFileName
+                        )
+                    )
                     continue
 
-                # Bug fix. dtb is not aligned (somma)
                 # if eprocess.Pcb.DirectoryTableBase % self.dtb_alignment != 0:
-                #     self.session.logging.debug("somma, dtb mis-alignment skip eprocess=0x{:>016x}, pid={}, dtb=0x{:>016x}, {}"
-                #                                .format(eprocess.obj_offset,
-                #                                        eprocess.pid,
-                #                                        eprocess.Pcb.DirectoryTableBase,
-                #                                        eprocess.ImageFileName))
                 #     continue
 
                 # Pointers must point to the kernel part of the address space.
                 list_head = eprocess.ActiveProcessLinks
-                if (list_head.Flink < self.kernel or list_head.Blink < self.kernel):
-                    self.session.logging.debug('[!] eprocess=0x{:>016x}, pid={}, {}, invalid flink={}, blink={}'.format(eprocess.obj_offset,
-                                                                                                                        eprocess.pid,
-                                                                                                                        eprocess.ImageFileName,
-                                                                                                                        list_head.Flink.value,
-                                                                                                                        list_head.Blink.value))
-                    continue
-
-                # Enhancement (somma)
-                if eprocess.pid % 4 != 0:
-                    self.session.logging.debug('[!] eprocess=0x{:>016x}, pid={}, invalid pid'.format(eprocess.obj_offset,
-                                                                                                     eprocess.pid))
+                if (list_head.Flink < self.kernel or
+                        list_head.Blink < self.kernel):
+                    self.session.logging.debug(
+                        'invalid range skip list flink={}, blink={}'.format(
+                            list_head.Flink.value,
+                            list_head.Blink.value,
+                        )
+                    )
                     continue
 
                 yield pool_obj, eprocess
@@ -444,12 +431,19 @@ class PSScan(common.WinScanner):
 
         # Scan each requested run in turn.
         for run in self.generate_memory_ranges():
+            self.session.logging.debug(
+                'Run PSScan Plugin, Scan Region={:>016x}->{:>016x}, Region Type={}'.format(
+                    run.start,
+                    run.end,
+                    run.data["type"]
+            ))
             # Just grab the AS and scan it using our scanner
             scanner = PoolScanProcess(session=self.session,
                                       profile=self.profile,
                                       address_space=run.address_space)
 
-            for pool_obj, eprocess in scanner.scan(offset=run.start, maxlen=run.length):
+            for pool_obj, eprocess in scanner.scan(
+                    offset=run.start, maxlen=run.length):
                 if run.data["type"] == "PhysicalAS":
                     # Switch address space from physical to virtual.
                     virtual_eprocess = (

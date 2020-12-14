@@ -1,4 +1,52 @@
-# The Rekall Forensic and Incident Response Framework
+# Rekall with Windows 10 Memory Compression
+
+This repository contains Rekall with additions made to support Windows 10
+memory compression. The system should automatically detect whether the
+kernel in the snapshot used memory compression. If the compression version is
+supported, we will automatically load an address space that supports
+decompression. All of this should be invisible to the user.
+
+## Supported Windows 10 Versions
+
+OS | Build | Arch
+--- | --- | ---
+Win 10 | 1607 | x86
+Win 10 | 1607 | x64
+Win 10 | 1703 | x86
+Win 10 | 1703 | x64
+Win 10 | 1709 | x86
+Win 10 | 1709 | x64
+Win 10 | 1803 | x86
+Win 10 | 1803 | x64
+Win 10 | 1809 | x86
+Win 10 | 1809 | x64
+
+
+## Requirements
+- [Python](http://www.python.org)
+- Download/clone this repository (https://github.com/fireeye/win10_rekall)
+
+To install, see the [Quick Start](https://github.com/fireeye/win10_rekall#quick-start).
+
+## Verify
+To verify an address space supporting Windows 10 memory compression is loaded,
+first run the 'modules' plugin. After it finishes, execute the command
+"print(session)". The result should contain a "Cache" section indicating the
+"default_address_space". This should report one of the following values:
+- WindowsIA32CompressedPagedMemoryPae
+- WindowsAMD64CompressedPagedMemory
+
+## Side Note
+The decompression algorithms also rely on the value of the Virtual Store page
+file number. On default Windows 10 configurations this value is two. We parse
+the MiState (_MI_SYSTEM_INFORMATION) structure to parse the array of page files.
+If we are unsuccessful, we fall back on using the default value of two. You may 
+override the default value by supplying a different value via the command line option:
+
+> --vspagefilenumber=<virtual_store_page_file_number>
+
+
+# The Rekall Forensic and Incident Response Framework (Original README)
 
 The Rekall Framework is a completely open collection of tools,
 implemented in Python under the Apache and GNU General Public License,

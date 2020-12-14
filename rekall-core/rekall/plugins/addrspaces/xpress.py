@@ -38,7 +38,7 @@ from struct import unpack
 from struct import error as StructError
 
 def recombine(outbuf):
-    return "".join(outbuf[k] for k in sorted(outbuf.keys()))
+    return b"".join(bytes([outbuf[k]]) for k in sorted(outbuf.keys()))
 
 def xpress_decode(inputBuffer):
     outputBuffer = {}
@@ -96,17 +96,17 @@ def xpress_decode(inputBuffer):
             if length == 7:
                 if nibbleIndex == 0:
                     nibbleIndex = inputIndex
-                    length = ord(inputBuffer[inputIndex]) % 16
+                    length = inputBuffer[inputIndex] % 16
                     inputIndex += 1
                 else:
                     # get the high nibble of the last place a nibble sized
                     # length was used thus we don't waste that extra half
                     # byte :p
-                    length = ord(inputBuffer[nibbleIndex]) // 16
+                    length = inputBuffer[nibbleIndex] // 16
                     nibbleIndex = 0
 
                 if length == 15:
-                    length = ord(inputBuffer[inputIndex])
+                    length = inputBuffer[inputIndex]
                     inputIndex += 1
                     if length == 255:
                         try:

@@ -53,7 +53,7 @@ def find_data_files(source):
 # approach ensures that any Rekall version will always work as tested - even
 # when external packages are upgraded in an incompatible way.
 install_requires = [
-    'PyYAML',
+    'PyYAML>=3.10.0',
     'acora==2.1',
     'arrow==0.10.0',
     'artifacts==20170909',
@@ -71,7 +71,7 @@ install_requires = [
     'pytz==2017.3',
     'rekall-capstone==3.0.5.post2',
     "rekall-efilter >= 1.6, < 1.7",
-    'pypykatz>=0.3.5;python_version>="3.5"',
+    # 'pypykatz>=0.3.5;python_version>="3.5"',
 
     # Should match exactly the version of this package.
     'rekall-lib',
@@ -157,7 +157,8 @@ class CleanCommand(Command):
         if os.getcwd() != self.cwd:
             raise RuntimeError('Must be in package root: %s' % self.cwd)
 
-        # Bug fix for windows system (somma)
+        # somma
+        # os.system('rm -rf ./build ./dist')
         remove_directory(os.path.join(os.getcwd(), 'build'))
         remove_directory(os.path.join(os.getcwd(), 'dist'))
 
