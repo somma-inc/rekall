@@ -15,6 +15,7 @@ import shutil
 import sys
 import win32process
 
+import capstone
 import yara
 
 from rekall import plugins
@@ -24,7 +25,7 @@ PROCESS_QUERY_INFORMATION = 0x400
 PROCESS_VM_READ = 0x10
 
 UCRT_DIR = r"C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\dlls"
-
+CURRENT_PATH = os.path.abspath(os.path.dirname(__file__))
 
 def EnumMissingModules():
   """Enumerate all modules which match the patterns MODULE_PATTERNS.
@@ -78,10 +79,19 @@ def EnumMissingModules():
 
 
 if __name__ == "__main__":
-    target_dir = "dist/rekal"
+    target_dir = os.path.join(
+      CURRENT_PATH,
+      "../../",
+      "dist/rekal"
+    )
     if not os.path.isdir(target_dir):
       raise RuntimeError("Target is not a directory.")
 
     for x in EnumMissingModules():
         print("Copying %s" % x)
         shutil.copy(x, target_dir)
+
+    shutil.copy(
+      os.path.join(os.path.dirname(capstone.__file__), capstone._cs._name),
+      target_dir
+    )

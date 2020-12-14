@@ -39,8 +39,9 @@ from rekall.plugins.tools import repository_manager
 try:
     from rekall.plugins.tools import webconsole_plugin
 except ImportError as e:
-    logger = logging.getLogger(__name__)
-    logger.warning("Webconsole disabled: %s", e)
+    pass
+    #logger = logging.getLogger(__name__)
+    #logger.warning("Webconsole disabled: %s", e)
 
 system = platform.system()
 if system == "Linux":

@@ -73,12 +73,10 @@ OutputBaseFilename=Rekall_{#REKALL_VERSION}_{#REKALL_CODENAME}_x86
     template += r'''
 [_ISTool]
 UseAbsolutePaths=true
-
 [Icons]
 Name: {group}\{cm:UninstallProgram, Rekall}; Filename: {uninstallexe}
 Name: {group}\Rekall Memory Forensics (Console); Filename: {app}\Rekal.exe; WorkingDir: {app}
 Name: {group}\Rekall Documentation; Filename: http://www.rekall-forensic.com/
-
 [Registry]
 Root: HKCR; Subkey: ".rkl"; ValueType: string; ValueName: ""; ValueData: "RekallForensicFile"; Flags: uninsdeletevalue
 Root: HKCR; Subkey: "RekallForensicFile"; ValueType: string; ValueName: ""; ValueData: "Rekall Forensic File"; Flags: uninsdeletekey
@@ -151,12 +149,17 @@ def main():
     shutil.rmtree("dist", True)
 
     print("Building with Pyinstaller")
-    subprocess.call(["pyinstaller", "--onedir", "-y", "-i",
+    subprocess.run(["pyinstaller", "--onedir", "-y", "-i",
                      "resources/rekall.ico",
                      "tools/installers/rekal.py"])
 
     print("Copy missing DLLs.")
-    subprocess.call(["python", "tools/installers/copy_dlls.py"])
+    python_path = os.path.join(
+        os.environ['VIRTUAL_ENV'],
+        "Scripts",
+        "python.exe"
+    )
+    subprocess.run([python_path, "tools/installers/copy_dlls.py"])
 
     print("Copy resources into the package.")
     # Recent versions of Pyinstaller already copy resources they know about.

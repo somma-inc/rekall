@@ -472,6 +472,105 @@ class WindowsPagedMemoryMixin(object):
         self.describe_pte(collection, None, pte_value, vaddr)
         return collection.physical_address
 
+    def _describe_pdpte(self, collection, pdpte_addr, vaddr):
+        """Describe processing of the PDPTE.
+
+        We found that the PDPTE can also refer to VAD entry. So we implement
+        all of the cases that are also considered for the pte
+        """
+        pdpte_value = self.read_pte(pdpte_addr)
+
+        if pdpte_value & self.transition_valid_mask:
+            collection.add(WindowsPDPTEDescriptor, pte_value=pdpte_value,
+                           pte_addr=pdpte_addr)
+
+            # Large page mapping
+            if pdpte_value & self.page_size_mask:
+                # Bits 51:30 are from the PDPTE
+                # Bits 29:0 are from the original linear address
+                physical_address = ((pdpte_value & 0xfffffc0000000) |
+                                (vaddr & 0x3fffffff))
+                collection.add(intel.CommentDescriptor, "One Gig page\n")
+
+                collection.add(intel.PhysicalAddressDescriptor,
+                               address=physical_address)
+
+                return collection
+            else:
+                # Bits 51:12 are from the PDPTE
+                # Bits 11:3 are bits 29:21 of the linear address
+                pde_addr = ((pdpte_value & 0xffffffffff000) |
+                            ((vaddr & 0x3fe00000) >> 18))
+                self._describe_pde(collection, pde_addr, vaddr)
+        # PDPTE Type is not known - we need to look it up in the vad. This
+        # case is triggered when the PDPTE ProtoAddress field is 0xffffffff -
+        # it means to consult the vad.
+        # An example PDPTE value is 0xffffffff00000420.
+        elif pdpte_value & self.prototype_mask:
+            if ((self.proto_protoaddress_mask & pdpte_value) >>
+                    self.proto_protoaddress_start in (0xffffffff0000,
+                                                      0xffffffff)):
+
+                collection.add(WindowsSoftwarePDPTEDescriptor,
+                               pte_value=pdpte_value, pte_addr=pdpte_addr)
+
+                self._describe_vad_pte(collection, pdpte_addr,
+                                       pdpte_value, vaddr)
+
+            else:
+                collection.add(WindowsProtoTypePDPTEDescriptor,
+                               pte_value=pdpte_value, pte_addr=pdpte_addr)
+
+                # This PDPTE points at the prototype PDPTE in
+                # pdpte.ProtoAddress. NOTE: The prototype PDPTE address is
+                # specified in the kernel's address space since it is
+                # allocated from pool.
+                pte_addr = pdpte_value >> self.proto_protoaddress_start
+                pte_value = struct.unpack("<Q", self.read(pdpte_addr, 8))[0]
+
+                self.describe_proto_pte(collection, pte_addr, pte_value, vaddr)
+
+        # Case 2 of consult VAD: pte.u.Soft.PageFileHigh == 0.
+        elif pdpte_value & self.soft_pagefilehigh_mask == 0:
+            collection.add(WindowsSoftwarePDPTEDescriptor,
+                           pte_value=pdpte_value, pte_addr=pdpte_addr)
+
+            self._describe_vad_pte(collection, pdpte_addr, pdpte_value, vaddr)
+
+        # PDPTE is paged out into a valid pagefile address.
+        elif pdpte_value & self.soft_pagefilehigh_mask:
+            collection.add(WindowsPDPTEDescriptor, pte_value=pdpte_value,
+                           pte_addr=pdpte_addr, pte_type="Soft")
+
+            pte = self.session.profile._MMPTE()
+            pte.u.Long = pdpte_value
+
+            # This is the address in the pagefle where the PTE resides.
+            soft_pte = pte.u.Soft
+            pagefile_address = (soft_pte.PageFileHigh * 0x1000 +
+                                ((vaddr & 0x3fe00000) >> 18))
+
+            protection = soft_pte.Protection.v()
+            if protection == 0:
+                collection.add(intel.InvalidAddress, "Invalid Soft PTE")
+                return
+
+            collection.add(WindowsPagefileDescriptor,
+                           address=pagefile_address,
+                           protection=soft_pte.Protection,
+                           pagefile_number=pte.u.Soft.PageFileLow.v())
+
+            pde_addr = self._get_pagefile_mapped_address(
+                soft_pte.PageFileLow.v(), pagefile_address)
+
+            # If we have the pagefile we can continue with the PDE
+            if pde_addr is not None:
+                pde_value = self.read_pte(pde_addr)
+                self._describe_pde(collection, pde_addr, pde_value, vaddr)
+        else:
+            # PDPTE is demand zero.
+            collection.add(DemandZeroDescriptor)
+
     def _describe_pde(self, collection, pde_addr, vaddr):
         """Describe processing of the PDE.
 
@@ -536,22 +635,14 @@ class WindowsPagedMemoryMixin(object):
             collection.add(DemandZeroDescriptor)
 
     @Reentrant
-    def _get_subsection_mapped_address(self, subsection_pte, is_address=True):
+    def _get_subsection_mapped_address(self, subsection_pte_address):
         """Map the subsection into the physical address space.
-
-        is_address specifies whether subsection_pte is the address of the pte
-        or its value (true means it is the address)
 
         Returns:
           The offset in the physical AS where this subsection PTE is mapped to.
         """
         if self.base_as_can_map_files:
-            if is_address:
-                pte = self.session.profile._MMPTE(subsection_pte)
-            else:
-                pte = self.session.profile._MMPTE()
-                pte.u.Long = subsection_pte
-
+            pte = self.session.profile._MMPTE(subsection_pte_address)
             subsection = pte.u.Subsect.Subsection
             subsection_base = subsection.SubsectionBase.v()
 
@@ -565,7 +656,7 @@ class WindowsPagedMemoryMixin(object):
                 # the array index of the subsection_pte_address that we were
                 # given.
                 file_offset = (
-                    (subsection_pte -
+                    (subsection_pte_address -
                      subsection_base) * 0x1000 / pte.obj_size +
                     subsection.StartingSector * 512)
 
@@ -858,9 +949,15 @@ class PagefileHook(common.AbstractWindowsParameterHook):
             )
 
         # In windows 10, the pagefiles are stored in an AVL Tree.
+        # Except for virtual page files. We get these from the
+        # partition.
         if pagingfiles == None:
-            mistate = self.session.address_resolver.get_constant_object(
-                "nt!MiState", "_MI_SYSTEM_INFORMATION")
+            # Get the MiState from the profile to avoid initialization of the
+            # address resolver. Otherwise this may lead to issues when the
+            # address resolver initialization causes a memory compression
+            # lookup that in turn requires the pagefile.
+            mistate = self.session.profile.get_constant_object(
+                "MiState", "_MI_SYSTEM_INFORMATION")
 
             root = mistate.PagingIo.PageFileHead.Root
             pagingfiles = root.traverse_as_type(
@@ -870,5 +967,18 @@ class PagefileHook(common.AbstractWindowsParameterHook):
             if pf:
                 result[pf.PageFileNumber.v()] = (
                     pf.File.file_name_with_drive(), pf.v())
+
+                # Check the partition for additional pagefiles
+                try:
+                    pf_array = pf.Partition.Vp.PagingFile
+
+                    for pf_part in pf_array:
+                        if (pf_part.is_valid() and
+                            not pf_part.PageFileNumber.v() in result):
+                            result[pf_part.PageFileNumber.v()] = (
+                                pf_part.File.file_name_with_drive(),
+                                pf_part.v())
+                except Exception as e:
+                    continue
 
         return result

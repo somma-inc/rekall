@@ -98,7 +98,6 @@ class AMD64PagedMemory(intel.IA32PagedMemoryPae):
 
         if not pdpte_value & self.valid_mask:
             collection.add(intel.InvalidAddress, "Invalid PDPTE\n")
-            return collection
 
         # Large page mapping.
         if pdpte_value & self.page_size_mask:
