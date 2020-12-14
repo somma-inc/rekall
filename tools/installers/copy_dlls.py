@@ -15,6 +15,7 @@ import shutil
 import sys
 import win32process
 
+import capstone
 import yara
 
 from rekall import plugins
@@ -89,3 +90,8 @@ if __name__ == "__main__":
     for x in EnumMissingModules():
         print("Copying %s" % x)
         shutil.copy(x, target_dir)
+
+    shutil.copy(
+      os.path.join(os.path.dirname(capstone.__file__), capstone._cs._name),
+      target_dir
+    )
