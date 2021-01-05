@@ -217,6 +217,7 @@ class PSMerge(common.WinScanner, GetTokenInformation):
         # dict(name='stat', width=4),
         dict(name="imagepath", width=75),
         dict(name="is_elevated", width=5),
+        dict(name="elevation_type", width=27),
         dict(name="create_time", width=24),
         dict(name="exit_time", width=24),
     ]
@@ -272,10 +273,11 @@ class PSMerge(common.WinScanner, GetTokenInformation):
 
                 # print(pslist.filter_processes(pids=eprocess.pid))
                 # print(eprocess.pid.value,"\n")
-                is_elevated, elevated_type=self.token_map(eprocess.pid.value)
+                pid=eprocess.pid.value
+                is_elevated, elevated_type=self.token_map(pid)
                 if len(is_elevated) == 0:
-                    is_elevated[eprocess.pid.value]=[None,"Unknown"]
-                    elevated_type[eprocess.pid.value]=[None,"Unknown"]
+                    is_elevated[pid]=[None,"Unknown"]
+                    elevated_type[pid]=[None,"Unknown"]
                 # print(is_elevated, elevated_type)
                 # print(is_elevated[eprocess.pid.value][1])
                 try:
@@ -286,9 +288,9 @@ class PSMerge(common.WinScanner, GetTokenInformation):
                         # offset_v=virtual_eprocess.obj_offset,
                         ppid=eprocess.InheritedFromUniqueProcessId,
                         # imagepath=eprocess.Peb.ProcessParameters.ImagePathName,                        
-                        is_elevated = is_elevated[eprocess.pid.value][1],
-
-                        imagepath=pslist_data[eprocess.pid.value].Peb.ProcessParameters.ImagePathName,
+                        is_elevated = is_elevated[pid][1],
+                        elevation_type = elevated_type[pid][1],
+                        imagepath=pslist_data[pid].Peb.ProcessParameters.ImagePathName,
                         # pdb=eprocess.Pcb.DirectoryTableBase,
                         create_time=eprocess.CreateTime or '',
                         exit_time=eprocess.ExitTime or ''
@@ -302,6 +304,64 @@ class PSMerge(common.WinScanner, GetTokenInformation):
                 # )
 
                 yield data
+
+        print("\n\n\n")
+
+        for run in self.generate_memory_ranges():
+            # Just grab the AS and scan it using our scanner
+            scanner = PoolScanProcess(session=self.session,
+                                      profile=self.profile,
+                                      address_space=run.address_space)
+
+            for pool_obj, eprocess in scanner.scan(offset=run.start, maxlen=run.length):
+                if run.data["type"] == "PhysicalAS":
+                    # Switch address space from physical to virtual.
+                    virtual_eprocess = (
+                        pslist.virtual_process_from_physical_offset(eprocess))
+                else:
+                    virtual_eprocess = eprocess
+
+                known = ""
+                if virtual_eprocess in known_eprocess:
+                    known += "E"
+
+                if eprocess.UniqueProcessId in known_pids:
+                    known += "P"
+
+
+                # print(pslist.filter_processes(pids=eprocess.pid))
+                # print(eprocess.pid.value,"\n")
+                pid=eprocess.pid.value
+                is_elevated, elevated_type=self.token_map(pid)
+                if len(is_elevated) == 0:
+                    is_elevated[pid]=[None,"Unknown"]
+                    elevated_type[pid]=[None,"Unknown"]
+                # print(is_elevated, elevated_type)
+                # print(is_elevated[eprocess.pid.value][1])
+                try:
+                    
+                    data = dict(
+                        # a='F' if pool_obj.FreePool else "",
+                        offset_p=eprocess,
+                        # offset_v=virtual_eprocess.obj_offset,
+                        ppid=eprocess.InheritedFromUniqueProcessId,
+                        # imagepath=eprocess.Peb.ProcessParameters.ImagePathName,                        
+                        is_elevated = is_elevated[pid][1],
+                        elevation_type = elevated_type[pid][1],
+                        imagepath=pslist_data[pid].Peb.ProcessParameters.ImagePathName,
+                        # pdb=eprocess.Pcb.DirectoryTableBase,
+                        create_time=eprocess.CreateTime or '',
+                        exit_time=eprocess.ExitTime or ''
+                )
+                except KeyError:
+                    pass
+                
+                # print("[+]", eprocess.Peb.ProcessParameters.ImagePathName)
+                # psscan_result.append(
+                #     data
+                # )
+
+                yield data    
         print(psscan_result)
         # pslist plugin 결과, api를 통해서 얻은 프로세스 목록 결과, psscan 결과
 
