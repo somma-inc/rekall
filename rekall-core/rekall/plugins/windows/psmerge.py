@@ -1,116 +1,115 @@
 import os
-
-from itertools import chain
-from collections import defaultdict
-
+import unittest
+import pywintypes
+import win32security
 import psutil
-import pandas as pd
 import hashlib
+
+import win32api,win32con
+import pandas as pd
 
 from rekall.plugins.windows import common
 from rekall.plugins.windows.filescan import PoolScanProcess
 
-'''refac hong
-class WindowsPsmerge(common.WinProcessFilter)"
-    """
-    Find hidden processes with various process listings
-    """
 
-    __name = "psmerge"
+class TestGetTokenInformation(unittest.TestCase):
 
-    METHODS = common.WinProcessFilter.METHODS + [
-        "PSScan", "Thrdproc"
-    ]
+    def setUp(self) -> None:
+        pass
 
-    __args = [
-        dict(name="method", choices=list(METHODS), type="ChoiceArray",
-             default=list(METHODS), help="Method to list processes.",
-             override=True),
-    ]
-    """ Table Header 출력 부분(현재 사용하지 않음) """
+    def tearDown(self) -> None:
+        pass
 
-    def render(self, renderer):
-        headers = [
-            dict(type="_EPROCESS", name="_EPROCESS"),
-        ]
-        header_list = ["Pslist_API", "Pslist_Live", "PSScan_Live"]
+    def seDebug(self):
+        try:
+            """SEDebug"""
+            flags = win32security.TOKEN_ADJUST_PRIVILEGES | win32security.TOKEN_QUERY
+            htoken = win32security.OpenProcessToken(win32api.GetCurrentProcess(), flags)
+            id = win32security.LookupPrivilegeValue(None, "seDebugPrivilege")
+            newPrivileges = [(id, win32security.SE_PRIVILEGE_ENABLED)]
+            win32security.AdjustTokenPrivileges(htoken, 0, newPrivileges)
+        except Exception as e:
+            print ('seDebug error')
+            pass 
+
+
+    def test_get_elevated(self):
+
+        self.seDebug()
         
-        # for method in header_list:
-        #     headers.append((method, method, "%s" % len(method)))
-        # renderer.table_header(headers) 
 
-        # PSScan session 받아오기
-        psscan_n = self.session.plugins.psmerge_psscan()
+        process_list=ProcessTree().process_map()
 
-        # PSList session 받아오기
-        pslist = self.session.plugins.pslist()
+        for pid in process_list:
+            try:
+                # print(process_list[i].name)
+                ph = win32api.OpenProcess(win32con.PROCESS_QUERY_INFORMATION | win32con.PROCESS_VM_READ, False, pid)
+                th = win32security.OpenProcessToken(ph, win32con.MAXIMUM_ALLOWED)
 
-        # temp = self.PSScan_merge()
-        # print(temp.collect())
+                is_elevated=win32security.GetTokenInformation(th, win32security.TokenElevation)                        
+                elevation_type = win32security.GetTokenInformation(th, win32security.TokenElevationType)
+                
+                print(f"{process_list[pid].name}({pid})\t{is_elevated}\t{elevation_type}")
 
-        #
-        # PSScan Driver mode 처리(PID(UniqueID), ImageFileName)
-        #
-        psscan_data = {}  # psscan_count = 0
-        for row in psscan_n.collect():  # psscan_count += 1
-            psscan_data[str(row['pid'])] = "[1]" + row['imagename']
+            except Exception as e:
+                pass
 
+        # pass
 
-        # PSList Driver mode 처리(PID(UniqueID), ImageFileName)
-        pslist_data = {}  # pslist_count = 0
-        for task in pslist.filter_processes():  # pslist_count += 1
-            pslist_data[str(task.UniqueProcessId)] = "[2]" + str(task.ImageFileName)
-            # print(task.Peb.ProcessParameters.ImagePathName)
+class GetTokenInformation:
+    def __init__(self):
+        self.is_elevated={}
+        self.elevation_type={}
+    
+    def token_map(self,pid):
+        self.get_elevated(pid)
+        return self.is_elevated, self.elevation_type
 
-        # PSList API mode 처리(Psutil lib, PID, ProcessName)
-        pslist_api_data = {}
-        for proc in psutil.process_iter():
-            pslist_api_data[str(proc.pid)] = "[3]" + proc.name()
+    def seDebug(self):
+        try:
+            """SEDebug"""
+            flags = win32security.TOKEN_ADJUST_PRIVILEGES | win32security.TOKEN_QUERY
+            htoken = win32security.OpenProcessToken(win32api.GetCurrentProcess(), flags)
+            id = win32security.LookupPrivilegeValue(None, "seDebugPrivilege")
+            newPrivileges = [(id, win32security.SE_PRIVILEGE_ENABLED)]
+            win32security.AdjustTokenPrivileges(htoken, 0, newPrivileges)
+        except Exception as e:
+            print ('seDebug error')
+            pass 
 
-        # 플러그인 결과 값 취합, Key:Pid, Value:[N]processName
-        #    [1] PSScan / [2] PSList_DRIVER / [3] PSList_API
-        psmerge = defaultdict(list)
-        for k, v in chain(psscan_data.items(), pslist_data.items(), pslist_api_data.items()):
-            psmerge[k].append(v)
+    def get_elevated(self,pid):
+        self.seDebug()
+        # process_list=ProcessTree().process_map()
 
-        # PID 오름차순 psmerge Dict key 정렬, int  """
-        sort_psmerge = sorted(list(map(int, list(psmerge.keys()))))
+        # for pid in psscan_pid:
+        try:
+            # print(process_list[i].name)
+            ph = win32api.OpenProcess(win32con.PROCESS_QUERY_INFORMATION | win32con.PROCESS_VM_READ, False, pid)
+            th = win32security.OpenProcessToken(ph, win32con.MAXIMUM_ALLOWED)
 
-        # Pandas 데이터 셋 생성
-        PSexistence = {}
-        for pid in sort_psmerge:
-            PSexistence[str(pid)] = ["True"] * 3
-
-        """ 플러그인 결과 값 유무 체크 """
-        Dataset = [psscan_data, pslist_data, pslist_api_data]
-        for plugin in Dataset:
-            for pid in set(psmerge.keys()).difference(set(plugin.keys())):
-                PSexistence[str(pid)][Dataset.index(plugin)] = "False"
-
-        """ '프로세스 이름(PID)' 형식의 INDEX 값 생성 """
-        ProcessName_PID = []
-        for i in sort_psmerge:
-            PSName = max(psmerge.get(str(i)), key=len)[3:]
-            ProcessName_PID.append(PSName + "(" + str(i) + ")")
-
-        """ 데이터 출력을 위한 임시 Pandas DataFrame 생성 """
-        df = pd.DataFrame({
-            'Process': ProcessName_PID,
-            '   PSScan': [exist[0] for exist in list(PSexistence.values())],
-            '   PSList_Driver': [exist[1] for exist in list(PSexistence.values())],
-            '   PSList_API': [exist[2] for exist in list(PSexistence.values())]
-        }
-        ).set_index('Process')
+            is_elevated=win32security.GetTokenInformation(th, win32security.TokenElevation)         
+            if int(is_elevated) == 0:
+                self.is_elevated[pid]=[0,"False"]
+            else:
+                self.is_elevated[pid]=[int(is_elevated),"True"]
 
 
+            elevation_type = win32security.GetTokenInformation(th, win32security.TokenElevationType)
+            if int(elevation_type) == 1:
+                self.elevation_type[pid] = [1,"TokenElevationTypeDefault"]
+            elif int(elevation_type) == 2:
+                self.elevation_type[pid] = [2,"TokenElevationTypeFull"]
+            elif int(elevation_type) == 3:
+                self.elevation_type[pid] = [3,"TokenElevationTypeLimited"]
+            else:
+                self.elevation_type[pid] = [int(elevation_type),"Unknown"]
 
-        # df_i = df.set_index('Process')
+            # print(f"{process_list[pid].name}({pid})\t{is_elevated}\t{elevation_type}")
 
-        """ csv 저장 """
-        df.to_csv('psmerge.csv')
-        print(df)
-'''
+        except Exception as e:
+            pass
 
+    
 
 class Process(object):
     def __init__(self, name:str, ppid:int, pid:int, creation_time:float, full_path:str,  cwd:str, cmd:str):
@@ -294,3 +293,11 @@ class PSMerge(common.WinScanner):
                 yield data
         print(psscan_result)
         # pslist plugin 결과, api를 통해서 얻은 프로세스 목록 결과, psscan 결과
+
+
+
+
+test1,test2=GetTokenInformation().token_map(1552)
+
+print(test1,test2)
+
