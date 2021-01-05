@@ -204,7 +204,7 @@ def md5sum(file_path: str, blocksize=8192):
     return hash_func.hexdigest()
 
 
-class PSMerge(common.WinScanner):
+class PSMerge(common.WinScanner, GetTokenInformation):
     name = "psmerge"
 
     table_header = [
@@ -216,6 +216,7 @@ class PSMerge(common.WinScanner):
         # dict(name="pdb", style="address"),
         # dict(name='stat', width=4),
         dict(name="imagepath", width=75),
+        dict(name="is_elevated", width=5),
         dict(name="create_time", width=24),
         dict(name="exit_time", width=24),
     ]
@@ -270,13 +271,23 @@ class PSMerge(common.WinScanner):
 
 
                 # print(pslist.filter_processes(pids=eprocess.pid))
+                # print(eprocess.pid.value,"\n")
+                is_elevated, elevated_type=self.token_map(eprocess.pid.value)
+                if len(is_elevated) == 0:
+                    is_elevated[eprocess.pid.value]=[None,"Unknown"]
+                    elevated_type[eprocess.pid.value]=[None,"Unknown"]
+                # print(is_elevated, elevated_type)
+                # print(is_elevated[eprocess.pid.value][1])
                 try:
+                    
                     data = dict(
                         # a='F' if pool_obj.FreePool else "",
                         offset_p=eprocess,
                         # offset_v=virtual_eprocess.obj_offset,
                         ppid=eprocess.InheritedFromUniqueProcessId,
-                        # imagepath=eprocess.Peb.ProcessParameters.ImagePathName,
+                        # imagepath=eprocess.Peb.ProcessParameters.ImagePathName,                        
+                        is_elevated = is_elevated[eprocess.pid.value][1],
+
                         imagepath=pslist_data[eprocess.pid.value].Peb.ProcessParameters.ImagePathName,
                         # pdb=eprocess.Pcb.DirectoryTableBase,
                         create_time=eprocess.CreateTime or '',
@@ -297,7 +308,7 @@ class PSMerge(common.WinScanner):
 
 
 
-test1,test2=GetTokenInformation().token_map(1552)
+# test1,test2=GetTokenInformation().token_map(1552)
 
-print(test1,test2)
+# print(test1,test2)
 
