@@ -12,8 +12,6 @@ from rekall.plugins.windows import common
 from rekall.plugins.windows.filescan import PoolScanProcess
 
 
-
-
 class GetTokenInformation:
     def __init__(self):
         self.is_elevated={}
@@ -37,11 +35,8 @@ class GetTokenInformation:
 
     def get_elevated(self,pid):
         self.seDebug()
-        # process_list=ProcessTree().process_map()
 
-        # for pid in psscan_pid:
         try:
-            # print(process_list[i].name)
             ph = win32api.OpenProcess(win32con.PROCESS_QUERY_INFORMATION | win32con.PROCESS_VM_READ, False, pid)
             th = win32security.OpenProcessToken(ph, win32con.MAXIMUM_ALLOWED)
 
@@ -50,7 +45,6 @@ class GetTokenInformation:
                 self.is_elevated[pid]=[0,"False"]
             else:
                 self.is_elevated[pid]=[int(is_elevated),"True"]
-
 
             elevation_type = win32security.GetTokenInformation(th, win32security.TokenElevationType)
             if int(elevation_type) == 1:
@@ -62,8 +56,7 @@ class GetTokenInformation:
             else:
                 self.elevation_type[pid] = [int(elevation_type),"Unknown"]
 
-            # print(f"{process_list[pid].name}({pid})\t{is_elevated}\t{elevation_type}")
-
+            # (f"{process_list[pid].name}({pid})\t{is_elevated}\t{elevation_type}")
         except Exception as e:
             pass
 
@@ -78,7 +71,6 @@ class Process(object):
         self.full_path = full_path
         self.cwd = cwd
         self.cmd = cmd
-
 
 class ProcessTree:
     def __init__(self):
@@ -103,15 +95,12 @@ class ProcessTree:
         for proc in psutil.process_iter():
             try:
                 pinfo = proc.as_dict(attrs=['pid', 'ppid', 'cwd', 'exe', 'name', 'create_time', 'cmdline'])
-                # print(pinfo)
             except (psutil.NoSuchProcess, psutil.ZombieProcess):
                 pass
             except Exception as e:
-                # print(pinfo)
-                # print(e)
                 pass
+
             else:
-               
                 if pinfo['name'] is None:
                     proc_name = ''
                 else:
@@ -129,8 +118,7 @@ class ProcessTree:
                     cmdline = ''
                 else:
                     cmdline = ' '.join(pinfo['cmdline'])
-                # todo
-                # 부모 권한 상승 정보 등을 여기서 추가 하면 어떨까?
+
                 self._add_process(proc_name,
                                   pinfo['ppid'],
                                   pinfo['pid'],
@@ -139,7 +127,6 @@ class ProcessTree:
                                   cwd,
                                   cmdline)
                 
-
     def _add_process(self, name:str, ppid:int, pid:int, creation_time: float,  full_path:str, cwd:str, cmd:str):
         p = Process(name, ppid, pid, creation_time, full_path, cwd, cmd)
         self._proc_map[pid] = p
@@ -151,7 +138,6 @@ class ProcessTree:
                 return p
             return None
 
-
 def md5sum(file_path: str, blocksize=8192):
     if os.path.exists(file_path) is False:
         return ""
@@ -161,18 +147,12 @@ def md5sum(file_path: str, blocksize=8192):
             hash_func.update(block)
     return hash_func.hexdigest()
 
-
 class PSMerge(common.WinScanner):
     name = "psmerge"
 
     table_header = [
-        # dict(name='a', width=1),
-        # dict(name='a', width=1),
         dict(name="offset_p", type="_EPROCESS"),
-        # dict(name="offset_v", style="address"),
         dict(name="ppid", width=6, align="r"),
-        # dict(name="pdb", style="address"),
-        # dict(name='stat', width=4),
         dict(name="imagepath", width=75),
         dict(name="is_elevated", width=5),
         dict(name="elevation_type", width=27),
@@ -181,7 +161,6 @@ class PSMerge(common.WinScanner):
         dict(name="psscan_driver", width=5),
         dict(name="pslist_driver", width=5),
         dict(name="pslist_api", width=5)
-        
     ]
 
     # Only bother to scan non paged pool by default.
@@ -195,21 +174,21 @@ class PSMerge(common.WinScanner):
         # is known.
         pslist = self.session.plugins.pslist()
         pslist_data = {}
-        # pslist_gen = self.session.plugins.pslist().filter_processes()
-        for i in pslist.list_eprocess():
-            pslist_data[i.pid.value]=i
+
+        # self.session.plugins.pslist().filter_processes() -> Eprocess 반환 
+        for task in pslist.list_eprocess():
+            pslist_data[task.pid.value]=task
         pslist_driver=list(pslist_data.keys())
         api_ps_list = ProcessTree()
-        # print("[+]",pslist.list_eprocess())
+
         # These are virtual addresses.
         known_eprocess = set()
         known_pids = set()
         for task in pslist.list_eprocess():
             known_eprocess.add(task)
             known_pids.add(task.UniqueProcessId)
-            # print("[+]", task.Peb.ProcessParameters.ImagePathName)
+
         pslist_api=list(ProcessTree().process_map().keys())
-        # Scan each requested run in turn.
         psscan_result = []
 
         for run in self.generate_memory_ranges():
@@ -232,76 +211,43 @@ class PSMerge(common.WinScanner):
 
                 if eprocess.UniqueProcessId in known_pids:
                     known += "P"
-                
-
-                # print(pslist.filter_processes(pids=eprocess.pid))
-                # print(eprocess.pid.value,"\n")
+    
                 pid=eprocess.pid.value
-
+                ppid=eprocess.InheritedFromUniqueProcessId
                 
-
                 is_elevated, elevated_type=GetTokenInformation().token_map(pid)
                 if len(is_elevated) == 0:
                     is_elevated[pid]=[None,"Unknown"]
                     elevated_type[pid]=[None,"Unknown"]
-                # print(is_elevated, elevated_type)
-                # print(is_elevated[eprocess.pid.value][1])
+
                 is_pslist_api="True"
                 if pid not in pslist_api:
                     is_pslist_api="False"
 
-                
                 is_pslist_driver="True"
                 if pid not in pslist_driver:
                     is_pslist_driver="False"
                     
-
                 try:
-                    
                     data = dict(
-                        # a='F' if pool_obj.FreePool else "",
                         offset_p=eprocess,
-                        # offset_v=virtual_eprocess.obj_offset,
-                        ppid=eprocess.InheritedFromUniqueProcessId,
-                        # imagepath=eprocess.Peb.ProcessParameters.ImagePathName,                        
+                        ppid=ppid,                  
                         is_elevated = is_elevated[pid][1] or '',
                         elevation_type = elevated_type[pid][1] or '',
+                        # whether Parents elevated 
+                        # is_elevated_p = is_elevated[ppid][1],
+                        # elevation_type_p = elevated_type[ppid][1],
                         imagepath=pslist_data[pid].Peb.ProcessParameters.ImagePathName,
-                        # pdb=eprocess.Pcb.DirectoryTableBase,
                         create_time=eprocess.CreateTime or '',
                         exit_time=eprocess.ExitTime or '',
                         psscan_driver="True",
                         pslist_api=is_pslist_api,
                         pslist_driver=is_pslist_driver
-
                 )
-                    # print (data)
                 except Exception as e:
-                    # print(e)
-                    # print (data)
                     pass
-                    
-                
-                
-
-                psscan_result.append(pid)
-                # print("[+]", eprocess.Peb.ProcessParameters.ImagePathName)
-                # psscan_result.append(
-                #     data
-                # )
 
                 yield data
-
-        print("\n\n\n")
-
-       
-        print(psscan_result)
-        # pslist plugin 결과, api를 통해서 얻은 프로세스 목록 결과, psscan 결과
-
-
-
-
-# test1,test2=GetTokenInformation().token_map(1552)
-
-# print(test1,test2)
+        psscan_result=len(psscan_result)
+        print(f"[+]Count : {psscan_result}")
 
