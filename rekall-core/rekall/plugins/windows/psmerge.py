@@ -168,6 +168,22 @@ class PSMerge(common.WinScanner):
         scan_kernel_nonpaged_pool=True
     )
     
+    def data_set(self, offset:str, ppid:int, is_elevated:str, elevation_type: str, imagepath:str,
+                    create_time:str, exit_time:str, psscan_d:str, pslist_a:str, pslist_d:str):
+        data = dict(
+                    offset_p=offset,
+                    ppid=ppid,
+                    is_elevated=is_elevated,
+                    elevation_type=elevation_type,
+                    imagepath=imagepath,
+                    create_time=create_time,
+                    exit_time=exit_time,
+                    psscan_driver=psscan_d,
+                    pslist_api=pslist_a,
+                    pslist_driver=pslist_d
+                )
+        return data
+    
     def collect(self):
         """Render results in a table."""
         # Try to do a regular process listing so we can compare if the process
@@ -188,7 +204,7 @@ class PSMerge(common.WinScanner):
             known_eprocess.add(task)
             known_pids.add(task.UniqueProcessId)
 
-        pslist_api=list(ProcessTree().process_map().keys())
+        pslist_api=ProcessTree().process_map()
         psscan_result = []
 
         for run in self.generate_memory_ranges():
@@ -221,7 +237,7 @@ class PSMerge(common.WinScanner):
                     elevated_type[pid]=[None,"Unknown"]
 
                 is_pslist_api="True"
-                if pid not in pslist_api:
+                if pid not in list(pslist_api.keys()):
                     is_pslist_api="False"
 
                 is_pslist_driver="True"
@@ -244,10 +260,66 @@ class PSMerge(common.WinScanner):
                         pslist_api=is_pslist_api,
                         pslist_driver=is_pslist_driver
                 )
+
                 except Exception as e:
                     pass
+                
+                psscan_result.append(pid)
 
+                # yield data
+        # psscan_result=len(psscan_result)
+        # print(f"[+]Count : {psscan_result}")
+
+
+        # print(psscan_result)
+        # print(pslist_api)
+        pslist=set(list(pslist_api.keys())).difference(set(psscan_result))
+        if len(pslist_api) != 0:
+            print (pslist_api[0].name)
+            for pid in pslist:
+                is_elevated, elevated_type=GetTokenInformation().token_map(pid)
+                
+                try:
+                    data = self.data_set(
+                        None,
+                        pslist_api[pid].ppid,
+                        is_elevated[pid][1] or "unknown",
+                        elevated_type[pid][1] or "unknown",
+                        pslist_api[pid].full_path,
+                        pslist_api[pid].creation_time,
+                        "Activated", "False", "False", "True"
+                        )
+                except Exception as e:
+                     data = self.data_set(
+                        None,
+                        pslist_api[pid].ppid,
+                        "unknown",
+                        "unknown",
+                        pslist_api[pid].full_path,
+                        pslist_api[pid].creation_time,
+                        "Activated", "False", "False", "True"
+                        )
+                
                 yield data
-        psscan_result=len(psscan_result)
-        print(f"[+]Count : {psscan_result}")
+                        # offset_p="unknown",
+                        # ppid=pslist_api[pid].ppid,                  
+                        # is_elevated = is_elevated[pid][1] or '',
+                        # elevation_type = elevated_type[pid][1] or '',
+                        # # whether Parents elevated 
+                        # # is_elevated_p = is_elevated[ppid][1],
+                        # # elevation_type_p = elevated_type[ppid][1],
+                        # imagepath=pslist_data[pid].Peb.ProcessParameters.ImagePathName,
+                        # create_time=eprocess.CreateTime or '',
+                        # exit_time=eprocess.ExitTime or '',
+                        # psscan_driver="True",
+                        # pslist_api=is_pslist_api,
+                        # pslist_driver=is_pslist_driver
+            
 
+        # self.name = name
+        # self.ppid = ppid
+        # self.pid = pid
+        # self.creation_time = creation_time
+        # self.full_path = full_path
+        # self.cwd = cwd
+        # self.cmd = cmd
