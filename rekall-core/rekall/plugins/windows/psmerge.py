@@ -12,49 +12,7 @@ from rekall.plugins.windows import common
 from rekall.plugins.windows.filescan import PoolScanProcess
 
 
-class TestGetTokenInformation(unittest.TestCase):
 
-    def setUp(self) -> None:
-        pass
-
-    def tearDown(self) -> None:
-        pass
-
-    def seDebug(self):
-        try:
-            """SEDebug"""
-            flags = win32security.TOKEN_ADJUST_PRIVILEGES | win32security.TOKEN_QUERY
-            htoken = win32security.OpenProcessToken(win32api.GetCurrentProcess(), flags)
-            id = win32security.LookupPrivilegeValue(None, "seDebugPrivilege")
-            newPrivileges = [(id, win32security.SE_PRIVILEGE_ENABLED)]
-            win32security.AdjustTokenPrivileges(htoken, 0, newPrivileges)
-        except Exception as e:
-            print ('seDebug error')
-            pass 
-
-
-    def test_get_elevated(self):
-
-        self.seDebug()
-        
-
-        process_list=ProcessTree().process_map()
-
-        for pid in process_list:
-            try:
-                # print(process_list[i].name)
-                ph = win32api.OpenProcess(win32con.PROCESS_QUERY_INFORMATION | win32con.PROCESS_VM_READ, False, pid)
-                th = win32security.OpenProcessToken(ph, win32con.MAXIMUM_ALLOWED)
-
-                is_elevated=win32security.GetTokenInformation(th, win32security.TokenElevation)                        
-                elevation_type = win32security.GetTokenInformation(th, win32security.TokenElevationType)
-                
-                print(f"{process_list[pid].name}({pid})\t{is_elevated}\t{elevation_type}")
-
-            except Exception as e:
-                pass
-
-        # pass
 
 class GetTokenInformation:
     def __init__(self):
