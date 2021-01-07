@@ -10,6 +10,8 @@ import pandas as pd
 
 from rekall.plugins.windows import common
 from rekall.plugins.windows.filescan import PoolScanProcess
+# from rekall.plugins.response import processes
+
 
 
 class GetTokenInformation:
@@ -170,6 +172,7 @@ class PSMerge(common.WinScanner):
     
     def data_set(self, offset:str, ppid:int, is_elevated:str, elevation_type: str, imagepath:str,
                     create_time:str, exit_time:str, psscan_d:str, pslist_a:str, pslist_d:str):
+        """render dict 생성"""
         data = dict(
                     offset_p=offset,
                     ppid=ppid,
@@ -266,41 +269,58 @@ class PSMerge(common.WinScanner):
                 
                 psscan_result.append(pid)
 
-                # yield data
+                yield data
         # psscan_result=len(psscan_result)
         # print(f"[+]Count : {psscan_result}")
 
 
         # print(psscan_result)
         # print(pslist_api)
+        print("-"*os.get_terminal_size().columns)
+        print("[List of processes not included in PSSCAN results]\n")
         pslist=set(list(pslist_api.keys())).difference(set(psscan_result))
+        pslist.add(13292)
+        index=0
         if len(pslist_api) != 0:
-            print (pslist_api[0].name)
             for pid in pslist:
+                index += 1
                 is_elevated, elevated_type=GetTokenInformation().token_map(pid)
-                
+
                 try:
-                    data = self.data_set(
-                        None,
-                        pslist_api[pid].ppid,
-                        is_elevated[pid][1] or "unknown",
-                        elevated_type[pid][1] or "unknown",
-                        pslist_api[pid].full_path,
-                        pslist_api[pid].creation_time,
-                        "Activated", "False", "False", "True"
-                        )
+                    # data = self.data_set(
+                    #     None,
+                    #     pslist_api[pid].ppid,
+                    #     is_elevated[pid][1] or "unknown",
+                    #     elevated_type[pid][1] or "unknown",
+                    #     pslist_api[pid].full_path,
+                    #     pslist_api[pid].creation_time,
+                    #     "Activated", "False", "False", "True"
+                    #     )
+                    data =dict(
+                        name=pslist_api[pid].name,
+                        process_id=pslist_api[pid].pid,
+                        ppid=pslist_api[pid].ppid,
+                        path=pslist_api[pid].full_path,
+                        creation_time=pslist_api[pid].creation_time,
+                        elevated=is_elevated[pid][1] or "unknown",
+                        elevated_type=elevated_type[pid][1] or "unknown",
+                    )
+
                 except Exception as e:
-                     data = self.data_set(
-                        None,
-                        pslist_api[pid].ppid,
-                        "unknown",
-                        "unknown",
-                        pslist_api[pid].full_path,
-                        pslist_api[pid].creation_time,
-                        "Activated", "False", "False", "True"
-                        )
+                    data=dict(
+                    name=pslist_api[pid].name,
+                    process_id=pslist_api[pid].pid,
+                    ppid=pslist_api[pid].ppid,
+                    path=pslist_api[pid].full_path,
+                    creation_time=pslist_api[pid].creation_time,
+                    elevated="unknown",
+                    elevated_type="unknown"
+                    )
+
+                print(f" [{index}] {data['name']}\tPID: {data['process_id']}\tPPID: {data['ppid']}", end="")
+                print(f"\timagepath: {data['path']}\tcreat_time: {data['creation_time']}\tis_elevated: {data['elevated']}\televation_type: {data['elevated_type']}")
                 
-                yield data
+                # print(data)
                         # offset_p="unknown",
                         # ppid=pslist_api[pid].ppid,                  
                         # is_elevated = is_elevated[pid][1] or '',
