@@ -4,9 +4,9 @@ import pywintypes
 import win32security
 import psutil
 import hashlib
+import csv
 
 import win32api,win32con
-import pandas as pd
 
 from rekall.plugins.windows import common
 from rekall.plugins.windows.filescan import PoolScanProcess
@@ -209,80 +209,92 @@ class PSMerge(common.WinScanner):
 
         pslist_api=ProcessTree().process_map()
         psscan_result = []
-
+        psscan_error=set()
         for run in self.generate_memory_ranges():
             # Just grab the AS and scan it using our scanner
             scanner = PoolScanProcess(session=self.session,
                                       profile=self.profile,
                                       address_space=run.address_space)
-
-            for pool_obj, eprocess in scanner.scan(offset=run.start, maxlen=run.length):
-                if run.data["type"] == "PhysicalAS":
-                    # Switch address space from physical to virtual.
-                    virtual_eprocess = (
-                        pslist.virtual_process_from_physical_offset(eprocess))
-                else:
-                    virtual_eprocess = eprocess
-
-                known = ""
-                if virtual_eprocess in known_eprocess:
-                    known += "E"
-
-                if eprocess.UniqueProcessId in known_pids:
-                    known += "P"
-    
-                pid=eprocess.pid.value
-                ppid=eprocess.InheritedFromUniqueProcessId
+            # print(os.getcwd())
+            with open('mycsvfile.csv','a') as f:
+                w = csv.writer(f)
                 
-                is_elevated, elevated_type=GetTokenInformation().token_map(pid)
-                if len(is_elevated) == 0:
-                    is_elevated[pid]=[None,"Unknown"]
-                    elevated_type[pid]=[None,"Unknown"]
+                w.writerow(["offset_p",	"ppid",	"is_elevated", "elevation_type", "imagepath", "create_time", "exit_time", "psscan_driver", "pslist_api", "pslist_driver"])
+                for pool_obj, eprocess in scanner.scan(offset=run.start, maxlen=run.length):
+                    if run.data["type"] == "PhysicalAS":
+                        # Switch address space from physical to virtual.
+                        virtual_eprocess = (
+                            pslist.virtual_process_from_physical_offset(eprocess))
+                    else:
+                        virtual_eprocess = eprocess
 
-                is_pslist_api="True"
-                if pid not in list(pslist_api.keys()):
-                    is_pslist_api="False"
+                    known = ""
+                    if virtual_eprocess in known_eprocess:
+                        known += "E"
 
-                is_pslist_driver="True"
-                if pid not in pslist_driver:
-                    is_pslist_driver="False"
+                    if eprocess.UniqueProcessId in known_pids:
+                        known += "P"
+        
+                    pid=eprocess.pid.value
+                    ppid=eprocess.InheritedFromUniqueProcessId
+
+                    # 2021.01.05 추후 elevated Unknown -> '' None 처리 해야함
+                    is_elevated, elevated_type=GetTokenInformation().token_map(pid)
+                    if len(is_elevated) == 0:
+                        is_elevated[pid]=[None,"Unknown"]
+                        elevated_type[pid]=[None,"Unknown"]
+
+                    is_pslist_api="True"
+                    if pid not in list(pslist_api.keys()):
+                        is_pslist_api="False"
+
+                    is_pslist_driver="True"
+                    if pid not in pslist_driver:
+                        is_pslist_driver="False"
+                    try:
+                        data = dict(
+                            offset_p=eprocess.obj_offset,
+                            ppid=ppid,                  
+                            is_elevated = is_elevated[pid][1] or '',
+                            elevation_type = elevated_type[pid][1] or '',
+                            # whether Parents elevated 
+                            # is_elevated_p = is_elevated[ppid][1],
+                            # elevation_type_p = elevated_type[ppid][1],
+                            imagepath=pslist_data[pid].Peb.ProcessParameters.ImagePathName,
+                            create_time=eprocess.CreateTime or '',
+                            exit_time=eprocess.ExitTime or '',
+                            psscan_driver="True",
+                            pslist_api=is_pslist_api,
+                            pslist_driver=is_pslist_driver
+                    )
                     
-                try:
-                    data = dict(
-                        offset_p=eprocess,
-                        ppid=ppid,                  
-                        is_elevated = is_elevated[pid][1] or '',
-                        elevation_type = elevated_type[pid][1] or '',
-                        # whether Parents elevated 
-                        # is_elevated_p = is_elevated[ppid][1],
-                        # elevation_type_p = elevated_type[ppid][1],
-                        imagepath=pslist_data[pid].Peb.ProcessParameters.ImagePathName,
-                        create_time=eprocess.CreateTime or '',
-                        exit_time=eprocess.ExitTime or '',
-                        psscan_driver="True",
-                        pslist_api=is_pslist_api,
-                        pslist_driver=is_pslist_driver
-                )
+                        
+                        w.writerow(data.values())
 
-                except Exception as e:
-                    pass
-                
-                psscan_result.append(pid)
+                    except Exception as e:
+                        # print("error")
+                        print(e)
+                        psscan_error.add(pid)
+                        
+                        # print(eprocess.pid.value)
+                        # print(eprocess.name)
+                    
+                    psscan_result.append(pid)
 
-                yield data
-        # psscan_result=len(psscan_result)
-        # print(f"[+]Count : {psscan_result}")
+                    yield data
 
-
-        # print(psscan_result)
-        # print(pslist_api)
-        print("-"*os.get_terminal_size().columns)
+        try:
+            print(os.get_terminal_size().columns*"-")
+        except Exception as e:
+            print("---Debug mode---")
+        
         print("[List of processes not included in PSSCAN results]\n")
-        pslist=set(list(pslist_api.keys())).difference(set(psscan_result))
-        pslist.add(13292)
+        psscan_error=psscan_error | (set(list(pslist_api.keys())).difference(set(psscan_result)))
+        # pslist.add(11996)
         index=0
-        if len(pslist_api) != 0:
-            for pid in pslist:
+        
+        if len(psscan_error) != 0:
+            for pid in psscan_error:
                 index += 1
                 is_elevated, elevated_type=GetTokenInformation().token_map(pid)
 
@@ -317,10 +329,9 @@ class PSMerge(common.WinScanner):
                     elevated_type="unknown"
                     )
 
-                print(f" [{index}] {data['name']}\tPID: {data['process_id']}\tPPID: {data['ppid']}", end="")
-                print(f"\timagepath: {data['path']}\tcreat_time: {data['creation_time']}\tis_elevated: {data['elevated']}\televation_type: {data['elevated_type']}")
+                print(f" [{index}] {data['name']}\tPID: {data['process_id']}\tPPID: {data['ppid']}\timagepath: {data['path']}")
+                print(f"\tcreat_time: {data['creation_time']}\t\tis_elevated: {data['elevated']}\televation_type: {data['elevated_type']}")
                 
-                # print(data)
                         # offset_p="unknown",
                         # ppid=pslist_api[pid].ppid,                  
                         # is_elevated = is_elevated[pid][1] or '',
@@ -336,10 +347,5 @@ class PSMerge(common.WinScanner):
                         # pslist_driver=is_pslist_driver
             
 
-        # self.name = name
-        # self.ppid = ppid
-        # self.pid = pid
-        # self.creation_time = creation_time
-        # self.full_path = full_path
-        # self.cwd = cwd
-        # self.cmd = cmd
+     
+        
