@@ -41,6 +41,7 @@ def find_data_files(source):
     return result
 
 install_requires = [
+    "capstone==4.0.2",
     "future==0.16.0",
     "rekall-lib >= 1.7.0rc1, < 1.8",
     "sseclient==0.0.18",

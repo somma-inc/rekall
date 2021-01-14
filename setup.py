@@ -96,7 +96,7 @@ commands = dict(
 # pulls in tested dependencies.
 install_requires = [
     # "wheel==0.34.1",
-    # "capstone",
+    "capstone==4.0.2",
     "rekall-agent >= 1.7.0rc1, < 1.8",
     "rekall-lib >= 1.7.0rc1, < 1.8",
     "rekall-core >= 1.7.0rc1, < 1.8",
