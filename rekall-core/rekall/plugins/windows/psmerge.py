@@ -10,6 +10,8 @@ import psutil
 import hashlib
 import csv
 import datetime
+import json
+import time
 
 import pefile
 import win32api,win32con
@@ -49,8 +51,6 @@ class GetTokenInformation:
         try:
             ph = win32api.OpenProcess(win32con.PROCESS_QUERY_INFORMATION | win32con.PROCESS_VM_READ, False, pid)
             th = win32security.OpenProcessToken(ph, win32con.MAXIMUM_ALLOWED)
-            if pid==5688:
-                print (ph,"/",th)
             is_elevated=win32security.GetTokenInformation(th, win32security.TokenElevation)         
             if int(is_elevated) == 0:
                 self.is_elevated[pid]=[0,"False"]
@@ -198,7 +198,7 @@ class PSMerge(common.WinScanner):
         dict(name="pslist_api", width=5),
         dict(name="hash_sha256", width=32),
         dict(name="is_signed", width=5),
-        dict(name="issuer", width=45)
+        dict(name="issuer", width=15)
     ]
 
     # Only bother to scan non paged pool by default.
@@ -242,12 +242,29 @@ class PSMerge(common.WinScanner):
             psname=self.pslist_api[eprocess.pid.value].name
         except KeyError:
             psname=eprocess.name
-        return psname
+        return str(psname)
 
     def collect(self):
         """Render results in a table."""
         # Try to do a regular process listing so we can compare if the process
         # is known.
+        cache_data=[]
+        try:
+            file_mtime = int(os.path.getctime('psmerge.dat'))
+            now_time = int(time.time())
+            if (now_time-file_mtime) < 300:
+                with open('psmerge.dat','r') as f:
+                    line=f.readline()
+                    while line != '':
+                        cache_data.append(int(line))
+                        line=f.readline()
+                    scan_count=1
+            else:
+                scan_count=0
+        except FileNotFoundError:
+            scan_count=0
+        
+        print(cache_data)
         pslist = self.session.plugins.pslist()
         pslist_data = {}
         
@@ -267,7 +284,7 @@ class PSMerge(common.WinScanner):
         self.pslist_api=ProcessTree().process_map()
         psscan_result = set()
         psscan_error=set()
-        
+        json_data={}
         for run in self.generate_memory_ranges():
             # Just grab the AS and scan it using our scanner
             scanner = PoolScanProcess(session=self.session,
@@ -279,6 +296,15 @@ class PSMerge(common.WinScanner):
                 
                 w.writerow(["name",	"pid", "ppid", "is_elevated", "elevation_type", "is_elevated_p", "elevation_type_p", "imagepath", "create_time", "exit_time", "psscan_driver", "pslist_api", "pslist_driver", "hash_sha256", "is_signed", "issuer", "\n"])
                 for pool_obj, eprocess in scanner.scan(offset=run.start, maxlen=run.length):
+                    pid=eprocess.pid.value
+                    ppid=eprocess.InheritedFromUniqueProcessId
+                    
+                    if scan_count==False:
+                        pass
+                    else:
+                        if pid in cache_data:
+                            continue
+                    #TODO : PSSCAN ERROR 로 들어가는 이슈 처리, 시간별로 캐시 갱신 처리 필요
                     if run.data["type"] == "PhysicalAS":
                         # Switch address space from physical to virtual.
                         virtual_eprocess = (
@@ -293,9 +319,6 @@ class PSMerge(common.WinScanner):
                     if eprocess.UniqueProcessId in known_pids:
                         known += "P"
         
-                    pid=eprocess.pid.value
-                    ppid=eprocess.InheritedFromUniqueProcessId
-
                     # 2021.01.05 추후 elevated Unknown -> '' None 처리 해야함
                     is_elevated, elevated_type=GetTokenInformation().token_map(pid)
                     is_elevated_p, elevated_type_p=GetTokenInformation().token_map(ppid)
@@ -308,7 +331,7 @@ class PSMerge(common.WinScanner):
                         is_pslist_driver=False
 
                     cert_object = {}
-                    
+                    print("이미지 ")
                     try:
                         imagepath=self.get_imagepath(pid)
                         sha_256=sha256sum(imagepath)
@@ -375,8 +398,8 @@ class PSMerge(common.WinScanner):
                     )
                         tsv_data = dict(
                             name=self.get_psname(eprocess),
-                            pid=pid,
-                            ppid=ppid,
+                            pid=int(pid),
+                            ppid=int(ppid),
                             is_elevated = is_elevated[pid][1],
                             elevation_type = elevated_type[pid][1],
                             is_elevated_p = is_elevated_p[ppid][1],
@@ -392,55 +415,74 @@ class PSMerge(common.WinScanner):
                             issuer=list(cert_object.keys())
                         )
                         w.writerow(tsv_data.values())
-                    # except KeyError as e:
-                    #     #pslist_driver object에 없는 경우임
+                        json_data[pid]=tsv_data
+                            
                     except Exception as e:
                         # print(e)
-                        psscan_error.add(pid)                        
+                        # with open('psscan_error.txt','w') as f:
+                        #     f.writelines(e)
+                        #     f.writelines(tsv_data)
+                        #     f.write("\n\n")
+                        psscan_error.add(pid)
 
-                    psscan_result.add(pid)  
+                    psscan_result.add(pid)
+
                     yield data
+        
+
+        with open('psmerge.dat','a') as f:
+            for pid in psscan_result:
+                f.write(str(pid)+'\n')
 
         try:
             print(os.get_terminal_size().columns*"-")
         except Exception as e:
             print("---Debug mode---")
-        
-
+    
         print(f"[+]PSSCAN count : {len(psscan_result)}\n")
         print("[List of processes not included in PSSCAN results]\n")
-        psscan_error=psscan_error | (set(list(self.pslist_api.keys())).difference(psscan_result))
+        if scan_count==False:
+            psscan_error=psscan_error | (set(list(self.pslist_api.keys())).difference(psscan_result))
+        else:
+            pass
         # debug psscan_error.add(11188)
         index=0
-        
+        data={}
         if len(psscan_error) != 0:
-            for pid in psscan_error:
+            for pid_num in psscan_error:
                 index += 1
-                is_elevated, elevated_type=GetTokenInformation().token_map(pid)
-                print("[+]",is_elevated, elevated_type)
+                is_elevated, elevated_type=GetTokenInformation().token_map(pid_num)
                 try:
                     data =dict(
-                        name = self.pslist_api[pid].name,
-                        process_id = self.pslist_api[pid].pid,
-                        ppid = self.pslist_api[pid].ppid,
-                        path = self.pslist_api[pid].full_path,
-                        creation_time = datetime.datetime.fromtimestamp(self.pslist_api[pid].creation_time).strftime("%Y-%m-%d %H:%M:%S"),
-                        elevated = is_elevated[pid][1],
-                        elevated_type = elevated_type[pid][1]
+                        name = self.pslist_api[pid_num].name,
+                        process_id = self.pslist_api[pid_num].pid,
+                        ppid = self.pslist_api[pid_num].ppid,
+                        elevated = is_elevated[pid_num][1],
+                        elevation_type = elevated_type[pid_num][1],
+                        is_elevated_p = '',
+                        elevation_type_p = '',
+                        imagepath=self.pslist_api[pid_num].full_path,
+                        create_time=datetime.datetime.fromtimestamp(self.pslist_api[pid_num].creation_time).strftime("%Y-%m-%d %H:%M:%S"),
+                        exit_time='',
+                        psscan_driver=False,
+                        pslist_api=True,
+                        pslist_driver=False,
+                        hash_sha256='',
+                        is_signed='',
+                        issuer='',
                     )
 
+                    json_data[data[process_id]]=data
+                
                 except Exception as e:
                     # 모든 결과값을 충족하지 못 할 경우
                     pass
-
-                print(f" [{index}] {data['name']}\tPID: {data['process_id']}\tPPID: {data['ppid']}\timagepath: {data['path']}")
-                print(f"\tcreat_time: {data['creation_time']}\t\tis_elevated: {data['elevated']}\televation_type: {data['elevated_type']}")
                 
-        '''
-        1. psscan object 'Peb.ProcessParameters.ImagePathName'값이 왜 없을까?
-            1.1 덩달아 hash값 구할 수 없음
-            1.2 엔트리가 파일리스인 프로세스의 해시 탐지 불가능
-        2. offset value 기반으로 name과 pid가 출력됨
-        3. pslist에는 있는데 psscan에는 없을 경우 예외처리 안 됨(psscan 작동 시 pslist plugin default)
 
-        '''
+        # print(json_data)
+                # print(f" [{index}] {data['name']}\tPID: {data['process_id']}\tPPID: {data['ppid']}\timagepath: {data['path']}")
+                # print(f"\tcreat_time: {data['creation_time']}\t\tis_elevated: {data['elevated']}\televation_type: {data['elevated_type']}")
+        
+        with open('psmerge.json','w',encoding='utf-8') as f:
+            json.dump(json_data, f, ensure_ascii=False, indent='\t')
+
