@@ -28,7 +28,7 @@ class GetTokenInformation:
     def __init__(self):
         self.is_elevated={}
         self.elevation_type={}
-    
+
     def token_map(self,pid):
         self.get_elevated(pid)
         return self.is_elevated, self.elevation_type
@@ -43,7 +43,7 @@ class GetTokenInformation:
             win32security.AdjustTokenPrivileges(htoken, 0, newPrivileges)
         except Exception as e:
             print ('seDebug error')
-            pass 
+            pass
 
     def get_elevated(self,pid):
         self.seDebug()
@@ -51,7 +51,7 @@ class GetTokenInformation:
         try:
             ph = win32api.OpenProcess(win32con.PROCESS_QUERY_INFORMATION | win32con.PROCESS_VM_READ, False, pid)
             th = win32security.OpenProcessToken(ph, win32con.MAXIMUM_ALLOWED)
-            is_elevated=win32security.GetTokenInformation(th, win32security.TokenElevation)         
+            is_elevated=win32security.GetTokenInformation(th, win32security.TokenElevation)
             if int(is_elevated) == 0:
                 self.is_elevated[pid]=[0,"False"]
             else:
@@ -72,7 +72,6 @@ class GetTokenInformation:
             self.is_elevated[pid]=[None,""]
             self.elevation_type[pid]=[None,""]
 
-    
 
 class Process(object):
     "pslist api object 추출"
@@ -84,6 +83,7 @@ class Process(object):
         self.full_path = full_path
         self.cwd = cwd
         self.cmd = cmd
+
 
 class ProcessTree:
     "pslist api object 추출"
@@ -140,7 +140,7 @@ class ProcessTree:
                                   image_path,
                                   cwd,
                                   cmdline)
-                
+
     def _add_process(self, name:str, ppid:int, pid:int, creation_time: float,  full_path:str, cwd:str, cmd:str):
         p = Process(name, ppid, pid, creation_time, full_path, cwd, cmd)
         self._proc_map[pid] = p
@@ -152,6 +152,7 @@ class ProcessTree:
                 return p
             return None
 
+
 def sha256sum(file_path: str, blocksize=8192):
     "sha-1 해시함수 사용"
     if os.path.exists(file_path) is False:
@@ -162,8 +163,9 @@ def sha256sum(file_path: str, blocksize=8192):
             hash_func.update(block)
     return hash_func.hexdigest()
 
+
 def get_certificates(self):
-    "디지털 서명 관련 Openssl x509 오브젝트 처리"    
+    "디지털 서명 관련 Openssl x509 오브젝트 처리"
     certs = _ffi.NULL
     if self.type_is_signed():
         certs = self._pkcs7.d.sign.cert
@@ -205,37 +207,19 @@ class PSMerge(common.WinScanner):
     scanner_defaults = dict(
         scan_kernel_nonpaged_pool=True
     )
-    
+
     pslist_api={}
 
-    # def data_set(self, offset:str, ppid:int, is_elevated:str, elevation_type: str, imagepath:str,
-    #                 create_time:str, exit_time:str, psscan_d:str, pslist_a:str, pslist_d:str):
-    #     """render dict 생성"""
-    #     data = dict(
-    #                 offset_p=offset,
-    #                 ppid=ppid,
-    #                 is_elevated=is_elevated,
-    #                 elevation_type=elevation_type,
-    #                 imagepath=imagepath,
-    #                 create_time=create_time,
-    #                 exit_time=exit_time,
-    #                 psscan_driver=psscan_d,
-    #                 pslist_api=pslist_a,
-    #                 pslist_driver=pslist_d
-    #             )
-    #     return data
-
-    def get_imagepath(self, pid):
+    def get_image_path(self, pid, pslist_data):
         """프로세스 이미지 경로 반환, QueryFullProcessImageNameW, PEB """
         try:
-            imagepath=self.pslist_api[pid].full_path
+            return self.pslist_api[pid].full_path
         except KeyError:
             try:
-                imagepath=str(pslist_data[pid].Peb.ProcessParameters.ImagePathName)
+                return str(pslist_data[pid].Peb.ProcessParameters.ImagePathName)
             except Exception:
                 return ''
-        return imagepath
-            
+
     def get_psname(self,eprocess):
         """프로세스 이름 반환, 길이 15 짤림 관련"""
         try:
@@ -263,12 +247,12 @@ class PSMerge(common.WinScanner):
                 scan_count=0
         except FileNotFoundError:
             scan_count=0
-        
+
         print(cache_data)
         pslist = self.session.plugins.pslist()
         pslist_data = {}
-        
-        # self.session.plugins.pslist().filter_processes() -> Eprocess 반환 
+
+        # self.session.plugins.pslist().filter_processes() -> Eprocess 반환
         for task in pslist.list_eprocess():
             pslist_data[task.pid.value]=task
         pslist_driver=list(pslist_data.keys())
@@ -281,10 +265,10 @@ class PSMerge(common.WinScanner):
             known_eprocess.add(task)
             known_pids.add(task.UniqueProcessId)
 
-        self.pslist_api=ProcessTree().process_map()
+        self.pslist_api = ProcessTree().process_map()
         psscan_result = set()
-        psscan_error=set()
-        json_data={}
+        psscan_error = set()
+        json_data = {}
         for run in self.generate_memory_ranges():
             # Just grab the AS and scan it using our scanner
             scanner = PoolScanProcess(session=self.session,
@@ -293,12 +277,10 @@ class PSMerge(common.WinScanner):
 
             with open('psmerge.tsv','a', newline="") as f:
                 w = csv.writer(f, delimiter='\t')
-                
-                w.writerow(["name",	"pid", "ppid", "is_elevated", "elevation_type", "is_elevated_p", "elevation_type_p", "imagepath", "create_time", "exit_time", "psscan_driver", "pslist_api", "pslist_driver", "hash_sha256", "is_signed", "issuer", "\n"])
                 for pool_obj, eprocess in scanner.scan(offset=run.start, maxlen=run.length):
                     pid=eprocess.pid.value
                     ppid=eprocess.InheritedFromUniqueProcessId
-                    
+
                     if scan_count==False:
                         pass
                     else:
@@ -318,7 +300,7 @@ class PSMerge(common.WinScanner):
 
                     if eprocess.UniqueProcessId in known_pids:
                         known += "P"
-        
+
                     # 2021.01.05 추후 elevated Unknown -> '' None 처리 해야함
                     is_elevated, elevated_type=GetTokenInformation().token_map(pid)
                     is_elevated_p, elevated_type_p=GetTokenInformation().token_map(ppid)
@@ -331,11 +313,10 @@ class PSMerge(common.WinScanner):
                         is_pslist_driver=False
 
                     cert_object = {}
-                    print("이미지 ")
                     try:
-                        imagepath=self.get_imagepath(pid)
-                        sha_256=sha256sum(imagepath)
-                        pe = pefile.PE(imagepath)
+                        image_path = self.get_image_path(pid, pslist_data)
+                        sha_256 = sha256sum(image_path)
+                        pe = pefile.PE(image_path)
 
                         address = pe.OPTIONAL_HEADER.DATA_DIRECTORY[
                             pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_SECURITY"]
@@ -343,14 +324,14 @@ class PSMerge(common.WinScanner):
                         size = pe.OPTIONAL_HEADER.DATA_DIRECTORY[
                             pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_SECURITY"]
                         ].Size
-                        
-                    ##todo : address 값 / 인증서 없을 때 부터 코드 작성 필요
+
+                    #todo : address 값 / 인증서 없을 때 부터 코드 작성 필요
                         if address == 0: #인증서 없는 경우
-                            is_signed=False
-                            cert_object['']=''
-                
+                            is_signed = False
+                            cert_object[''] = ''
+
                         else:
-                            is_signed=True
+                            is_signed = True
                             signature = pe.write()[address + 8 :]
                             pkcs = crypto.load_pkcs7_data(crypto.FILETYPE_ASN1, bytes(signature))
                             certs = get_certificates(pkcs)
@@ -358,35 +339,35 @@ class PSMerge(common.WinScanner):
                                 c = crypto.dump_certificate(crypto.FILETYPE_PEM, cert)
                                 x509 = crypto.load_certificate(crypto.FILETYPE_PEM, c)
 
-                                components=x509.get_subject().get_components()+x509.get_issuer().get_components()
+                                components = x509.get_subject().get_components()+x509.get_issuer().get_components()
                                 cnt=0
-                                key_issuer=''
+                                key_issuer = ''
                                 for cert_value in components:
-                                    
+
                                     if b'CN' in cert_value:
-                                        if cnt==0:
-                                            key_issuer=cert_value[1].decode()
-                                            cert_object[key_issuer]=''
-                                            cnt=cnt+1
+                                        if cnt == 0:
+                                            key_issuer = cert_value[1].decode()
+                                            cert_object[key_issuer] = ''
+                                            cnt = cnt+1
                                         else:
                                             cert_object[key_issuer]=cert_value[1].decode()
-                                        
+
                     except Exception as e:# 풀스캔 결과값에만 오브젝트가 존재할경우
-                        imagepath=''
-                        sha_256=''
-                        is_signed=''
-                        cert_object['']=''
-                            
+                        image_path =''
+                        sha_256 = ''
+                        is_signed = ''
+                        cert_object[''] = ''
+
                     try:
                         data = dict(
                             offset_p=eprocess,
-                            ppid=ppid,                  
-                            is_elevated = is_elevated[pid][1] or '',
-                            elevation_type = elevated_type[pid][1] or '',
-                            # whether Parents elevated 
+                            ppid=ppid,
+                            is_elevated=is_elevated[pid][1] or '',
+                            elevation_type=elevated_type[pid][1] or '',
+                            # whether Parents elevated
                             # is_elevated_p = is_elevated[ppid][1],
                             # elevation_type_p = elevated_type[ppid][1],
-                            imagepath=imagepath,
+                            imagepath=image_path,
                             create_time=eprocess.CreateTime or '',
                             exit_time=eprocess.ExitTime or '',
                             psscan_driver=True,
@@ -404,7 +385,7 @@ class PSMerge(common.WinScanner):
                             elevation_type = elevated_type[pid][1],
                             is_elevated_p = is_elevated_p[ppid][1],
                             elevation_type_p = elevated_type_p[ppid][1],
-                            imagepath=imagepath,
+                            imagepath=image_path,
                             create_time=eprocess.CreateTime.as_windows_timestamp(),
                             exit_time=eprocess.ExitTime.as_windows_timestamp(),
                             psscan_driver=True,
@@ -416,7 +397,7 @@ class PSMerge(common.WinScanner):
                         )
                         w.writerow(tsv_data.values())
                         json_data[pid]=tsv_data
-                            
+
                     except Exception as e:
                         # print(e)
                         # with open('psscan_error.txt','w') as f:
@@ -428,7 +409,7 @@ class PSMerge(common.WinScanner):
                     psscan_result.add(pid)
 
                     yield data
-        
+
 
         with open('psmerge.dat','a') as f:
             for pid in psscan_result:
@@ -438,7 +419,7 @@ class PSMerge(common.WinScanner):
             print(os.get_terminal_size().columns*"-")
         except Exception as e:
             print("---Debug mode---")
-    
+
         print(f"[+]PSSCAN count : {len(psscan_result)}\n")
         print("[List of processes not included in PSSCAN results]\n")
         if scan_count==False:
@@ -472,17 +453,17 @@ class PSMerge(common.WinScanner):
                         issuer='',
                     )
 
-                    json_data[data[process_id]]=data
-                
+                    json_data[data['process_id']] = data
+
                 except Exception as e:
                     # 모든 결과값을 충족하지 못 할 경우
                     pass
-                
+
 
         # print(json_data)
                 # print(f" [{index}] {data['name']}\tPID: {data['process_id']}\tPPID: {data['ppid']}\timagepath: {data['path']}")
                 # print(f"\tcreat_time: {data['creation_time']}\t\tis_elevated: {data['elevated']}\televation_type: {data['elevated_type']}")
-        
+
         with open('psmerge.json','w',encoding='utf-8') as f:
             json.dump(json_data, f, ensure_ascii=False, indent='\t')
 

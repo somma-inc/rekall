@@ -24,6 +24,7 @@
 from __future__ import print_function
 __author__ = "Michael Cohen <scudette@gmail.com>"
 import os
+import time
 import subprocess
 import setuptools
 import shutil
@@ -77,6 +78,7 @@ install_requires = [
     # Should match exactly the version of this package.
     'rekall-lib',
     'rekall-yara==3.6.3.1',
+    'PyOpenSSL==20.0.1'
 ]
 
 
