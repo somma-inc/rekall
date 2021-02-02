@@ -232,23 +232,25 @@ class PSMerge(common.WinScanner):
         """Render results in a table."""
         # Try to do a regular process listing so we can compare if the process
         # is known.
-        cache_data=[]
-        try:
-            file_mtime = int(os.path.getctime('psmerge.dat'))
-            now_time = int(time.time())
-            if (now_time-file_mtime) < 300:
-                with open('psmerge.dat','r') as f:
-                    line=f.readline()
-                    while line != '':
-                        cache_data.append(int(line))
-                        line=f.readline()
-                    scan_count=1
-            else:
-                scan_count=0
-        except FileNotFoundError:
-            scan_count=0
 
-        print(cache_data)
+        # 파일 DB 처리 부분
+        # cache_data=[]
+        # try:
+        #     file_mtime = int(os.path.getctime('psmerge.dat'))
+        #     now_time = int(time.time())
+        #     if (now_time-file_mtime) < 300:
+        #         with open('psmerge.dat','r') as f:
+        #             line=f.readline()
+        #             while line != '':
+        #                 cache_data.append(int(line))
+        #                 line=f.readline()
+        #             scan_count=1
+        #     else:
+        #         scan_count=0
+        # except FileNotFoundError:
+        #     scan_count=0
+
+        # print(cache_data)
         pslist = self.session.plugins.pslist()
         pslist_data = {}
 
@@ -281,12 +283,12 @@ class PSMerge(common.WinScanner):
                     pid=eprocess.pid.value
                     ppid=eprocess.InheritedFromUniqueProcessId
 
-                    if scan_count==False:
-                        pass
-                    else:
-                        if pid in cache_data:
-                            continue
-                    #TODO : PSSCAN ERROR 로 들어가는 이슈 처리, 시간별로 캐시 갱신 처리 필요
+                    # if scan_count==False:
+                    #     pass
+                    # else:
+                    #     if pid in cache_data:
+                    #         continue
+                
                     if run.data["type"] == "PhysicalAS":
                         # Switch address space from physical to virtual.
                         virtual_eprocess = (
@@ -325,7 +327,6 @@ class PSMerge(common.WinScanner):
                             pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_SECURITY"]
                         ].Size
 
-                    #todo : address 값 / 인증서 없을 때 부터 코드 작성 필요
                         if address == 0: #인증서 없는 경우
                             is_signed = False
                             cert_object[''] = ''
@@ -411,9 +412,9 @@ class PSMerge(common.WinScanner):
                     yield data
 
 
-        with open('psmerge.dat','a') as f:
-            for pid in psscan_result:
-                f.write(str(pid)+'\n')
+        # with open('psmerge.dat','a') as f:
+        #     for pid in psscan_result:
+        #         f.write(str(pid)+'\n')
 
         try:
             print(os.get_terminal_size().columns*"-")
@@ -422,11 +423,11 @@ class PSMerge(common.WinScanner):
 
         print(f"[+]PSSCAN count : {len(psscan_result)}\n")
         print("[List of processes not included in PSSCAN results]\n")
-        if scan_count==False:
-            psscan_error=psscan_error | (set(list(self.pslist_api.keys())).difference(psscan_result))
-        else:
-            pass
-        # debug psscan_error.add(11188)
+        # if scan_count==False:
+        #     psscan_error=psscan_error | (set(list(self.pslist_api.keys())).difference(psscan_result))
+        # else:
+        #     pass
+
         index=0
         data={}
         if len(psscan_error) != 0:
