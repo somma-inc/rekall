@@ -271,6 +271,7 @@ class PSMerge(common.WinScanner):
         psscan_result = set()
         psscan_error = set()
         json_data = {}
+        except_process=["OfficeClickToRun.exe","TeamViewer_Service.exe","Code.exe","Teams.exe","vmware.exe","cpptools.exe","EXCEL.EXE","Typora.exe","vmware-hostd.exe","Video.UI.exe"]
         for run in self.generate_memory_ranges():
             # Just grab the AS and scan it using our scanner
             scanner = PoolScanProcess(session=self.session,
@@ -282,7 +283,8 @@ class PSMerge(common.WinScanner):
                 for pool_obj, eprocess in scanner.scan(offset=run.start, maxlen=run.length):
                     pid=eprocess.pid.value
                     ppid=eprocess.InheritedFromUniqueProcessId
-
+                    print(str(self.get_psname(eprocess)))
+                    
                     # if scan_count==False:
                     #     pass
                     # else:
@@ -313,9 +315,12 @@ class PSMerge(common.WinScanner):
                     is_pslist_driver=True
                     if pid not in pslist_driver:
                         is_pslist_driver=False
-
+                    print("[+]PE READ START // ",self.get_psname(eprocess))
+                    start=time.time()
                     cert_object = {}
                     try:
+                        if self.get_psname(eprocess) in except_process:
+                            raise Exception("error")
                         image_path = self.get_image_path(pid, pslist_data)
                         sha_256 = sha256sum(image_path)
                         pe = pefile.PE(image_path)
@@ -358,8 +363,15 @@ class PSMerge(common.WinScanner):
                         sha_256 = ''
                         is_signed = ''
                         cert_object[''] = ''
-
+                    
+                    print("[+]PE READ END // ",self.get_psname(eprocess))
+                    print(time.time()-start)
+                    if int(time.time()-start) >= 1:
+                        with open("certtime_log.txt","a") as logfile:
+                            logfile.write(self.get_psname(eprocess)+" // "+str(image_path)+"\n")
                     try:
+                        if pid==19484:
+                            raise Exception("error")
                         data = dict(
                             offset_p=eprocess,
                             ppid=ppid,
@@ -400,11 +412,12 @@ class PSMerge(common.WinScanner):
                         json_data[pid]=tsv_data
 
                     except Exception as e:
-                        # print(e)
-                        # with open('psscan_error.txt','w') as f:
-                        #     f.writelines(e)
-                        #     f.writelines(tsv_data)
-                        #     f.write("\n\n")
+                        print(e)
+                        with open('psscan_error.txt','w') as f:
+                            f.writelines(str(e))
+                            # f.writelines(tsv_data)
+                            print(tsv_data, file=f)
+                            f.write("\n\n")
                         psscan_error.add(pid)
 
                     psscan_result.add(pid)
@@ -415,7 +428,7 @@ class PSMerge(common.WinScanner):
         # with open('psmerge.dat','a') as f:
         #     for pid in psscan_result:
         #         f.write(str(pid)+'\n')
-
+        print(psscan_error)
         try:
             print(os.get_terminal_size().columns*"-")
         except Exception as e:
@@ -427,6 +440,8 @@ class PSMerge(common.WinScanner):
         #     psscan_error=psscan_error | (set(list(self.pslist_api.keys())).difference(psscan_result))
         # else:
         #     pass
+        print((set(list(self.pslist_api.keys())).difference(psscan_result)))
+        psscan_error=psscan_error | (set(list(self.pslist_api.keys())).difference(psscan_result))
 
         index=0
         data={}
@@ -460,7 +475,7 @@ class PSMerge(common.WinScanner):
                     # 모든 결과값을 충족하지 못 할 경우
                     pass
 
-
+                print(data)
         # print(json_data)
                 # print(f" [{index}] {data['name']}\tPID: {data['process_id']}\tPPID: {data['ppid']}\timagepath: {data['path']}")
                 # print(f"\tcreat_time: {data['creation_time']}\t\tis_elevated: {data['elevated']}\televation_type: {data['elevated_type']}")

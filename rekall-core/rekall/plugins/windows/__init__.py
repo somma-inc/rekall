@@ -46,4 +46,4 @@ from rekall.plugins.windows import psmerge
 #     from rekall.plugins.windows import pypykatz
 
 from rekall.plugins.windows import win10_memcompression
-# from rekall.plugins.windows import ptenum
+from rekall.plugins.windows import ptenum
