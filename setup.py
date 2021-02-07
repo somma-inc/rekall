@@ -50,6 +50,8 @@ rekall_description = "Rekall Memory Forensic Framework"
 
 class install(_install):
     def do_egg_install(self):
+        subprocess.check_call(['pip', 'install', 'git+https://github.com/kimtaehong/PythonForWindows.git'])
+
         path = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "rekall-core", "setup.py"))
 
@@ -95,9 +97,9 @@ commands = dict(
 # This requires an exact version to ensure that installing the meta package
 # pulls in tested dependencies.
 install_requires = [
-    # "wheel==0.34.1",
+    "wheel==0.34.1",
     "capstone==4.0.2",
-    "rekall-agent >= 1.7.0rc1, < 1.8",
+    #"rekall-agent >= 1.7.0rc1, < 1.8",
     "rekall-lib >= 1.7.0rc1, < 1.8",
     "rekall-core >= 1.7.0rc1, < 1.8",
     "ipython >= 5.0.0, < 7.0",

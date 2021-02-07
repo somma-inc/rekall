@@ -58,7 +58,7 @@ install_requires = [
     'PyYAML>=3.10.0',
     'acora==2.1',
     'arrow==0.10.0',
-    'artifacts==20170909',
+    'artifacts==20201106',
     'future==0.16.0',
     'intervaltree==2.1.0',
     'ipaddr==2.2.0',
@@ -69,8 +69,8 @@ install_requires = [
     'pyelftools==0.24',
     'pyparsing==2.1.5',
     'python-dateutil==2.6.1',
-    'pytsk3==20170802',
-    'pytz==2017.3',
+    'pytsk3==20200117',
+    'pytz==2021.1',
     'rekall-capstone==3.0.5.post2',
     "rekall-efilter >= 1.6, < 1.7",
     # 'pypykatz>=0.3.5;python_version>="3.5"',
@@ -78,7 +78,7 @@ install_requires = [
     # Should match exactly the version of this package.
     'rekall-lib',
     'rekall-yara==3.6.3.1',
-    'PyOpenSSL==20.0.1'
+    #'PyOpenSSL==20.0.1'
 ]
 
 
