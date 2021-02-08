@@ -298,7 +298,7 @@ class PSMerge(common.WinScanner):
                                       profile=self.profile,
                                       address_space=run.address_space)
 
-            for _, eprocess in scanner.scan(offset=run.start, maxlen=run.length):
+            for pool_object, eprocess in scanner.scan(offset=run.start, maxlen=run.length):
                 pid = eprocess.pid.value
 
                 # eprocess 구조체에 있는 프로세스명은 최대 16글자만 표현 되므로, psutil에서 가져온다.

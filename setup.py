@@ -99,7 +99,7 @@ commands = dict(
 install_requires = [
     "wheel==0.34.1",
     "capstone==4.0.2",
-    #"rekall-agent >= 1.7.0rc1, < 1.8",
+    "rekall-agent >= 1.7.0rc1, < 1.8",
     "rekall-lib >= 1.7.0rc1, < 1.8",
     "rekall-core >= 1.7.0rc1, < 1.8",
     "ipython >= 5.0.0, < 7.0",
