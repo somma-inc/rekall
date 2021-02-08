@@ -24,10 +24,10 @@
 
 from rekall.plugins.windows import common
 from rekall.plugins.overlays.windows import tcpip_vtypes
-from rekall.plugins.tools.tsv_parse import OutputResult
+from rekall.plugins.tools.exporter import Exporter
 
 import os
-
+import datetime
 # Python's socket.AF_INET6 is 0x1e but Microsoft defines it
 # as a constant value of 0x17 in their source code. Thus we
 # need Microsoft's since that's what is found in memory.
@@ -113,6 +113,13 @@ class WinNetscan(tcpip_vtypes.TcpipPluginMixin,
         dict(name="owner", width=14),
         dict(name="created")
     ]
+
+    __args = [
+        dict(name='output_path',
+             default=os.path.join(
+                 os.path.abspath(os.path.dirname(__file__)), f'netscan_{datetime.datetime.utcnow().timestamp()}.tsv'))
+    ]
+
 
     scanner_defaults = dict(
         scan_kernel_nonpaged_pool=True
@@ -208,6 +215,7 @@ class WinNetscan(tcpip_vtypes.TcpipPluginMixin,
 
     def collect(self):
         netscan_dict={}
+        exporter = Exporter(self.plugin_args.output_path)
         for run in self.generate_memory_ranges():
             for (net_object, proto, laddr, lport, raddr, rport,
                  state) in self.generate_hits(run):
@@ -218,45 +226,20 @@ class WinNetscan(tcpip_vtypes.TcpipPluginMixin,
                     vm=self.kernel_address_space, profile=self.session.profile)
                 # print(os.get_terminal_size().columns*"-")
 
-                netscan_dict[str(net_object.obj_offset)]=dict(
+                netscan_dict=dict(
                     protocol=proto,
                     src_ip=lendpoint,
                     dst_ip=rendpoint,
                     state=state,
                     pid=owner.UniqueProcessId,
                     process_name=owner.ImageFileName,
-                    create_time=net_object.CreateTime
+                    create_time=net_object.CreateTime.as_windows_timestamp()
                 )
-
-                # netscan_object=OutputResult(
-                #     **dict(
-                #         protocol=proto,
-                #         src_ip=lendpoint,
-                #         dst_ip=rendpoint,
-                #         state=state,
-                #         pid=owner.UniqueProcessId,
-                #         process_name=owner.ImageFileName,
-                #         create_time=net_object.CreateTime
-                #         )
-                # )
-
+                exporter.export_to_tsv(netscan_dict.values())
+                # print(dir(net_object.CreateTime))
                 yield (net_object.obj_offset, proto, lendpoint,
                        rendpoint, state,
                        owner.UniqueProcessId,
                        owner.ImageFileName,
                        net_object.CreateTime)
-        
-        OutputResult(**netscan_dict).make_tsv("netscan_0203")
-        # netscan_object.make_tsv("netscan_0203")
-'''
-            table_header = [
-        dict(name="offset", style="address"),
-        dict(name="protocol", width=8),
-        dict(name="local_addr", width=20),
-        dict(name="remote_addr", width=30),
-        dict(name="state", width=16),
-        dict(name="pid", width=5, align="r"),
-        dict(name="owner", width=14),
-        dict(name="created")
-    ]
-    '''
+        del exporter

@@ -17,7 +17,6 @@ import ntpath
 
 import win32api
 import win32con
-import windows
 
 from rekall.plugins.tools.exporter import Exporter
 from rekall.plugins.windows import common
@@ -354,7 +353,6 @@ class PSMerge(common.WinScanner):
                     ppid=eprocess.InheritedFromUniqueProcessId,
                     is_elevated=proc.elevated,
                     elevation_type=proc.elevation_type,
-                    imagepath=proc.image_path,
                     create_time=eprocess.CreateTime or '',
                     exit_time=eprocess.ExitTime or '',
                     psscan_driver=True,
