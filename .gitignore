@@ -55,3 +55,5 @@ rekall-forensic*
 *.whl
 .eggs
 __pycache__
+
+venv

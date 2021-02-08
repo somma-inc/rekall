@@ -1,6 +1,8 @@
+#
 # @author       JeongPil, Lee(jeongpil@somma.kr)
 # @date         2021/01/05 10:00 created.
 # @copyright    (C)Somma,Inc. All rights reserved.
+#
 import os
 import unittest
 import pywintypes
@@ -11,117 +13,163 @@ import csv
 import datetime
 import json
 import time
+import ntpath
 
 import win32api
 import win32con
 import windows
 
-# import pefile
-# from OpenSSL import crypto
-# from OpenSSL.crypto import _lib, _ffi, X509
-
+from rekall.plugins.tools.exporter import Exporter
 from rekall.plugins.windows import common
 from rekall.plugins.windows.filescan import PoolScanProcess
 
 
-class GetTokenInformation:
-    """자식, 부모 프로세스 권한 값 추출
+def sha256sum(file_path: str, block_size=8192):
+    """sha-1 해시함수 사용
     """
-    def __init__(self):
-        self.is_elevated = {}
-        self.elevation_type = {}
+    if os.path.exists(file_path) is False:
+        return ''
+    hash_func = hashlib.sha256()
+    with open(file_path, 'rb') as file_object:
+        for block in iter(lambda: file_object.read(block_size), b""):
+            hash_func.update(block)
+    return hash_func.hexdigest()
 
-    def token_map(self,pid):
-        self.get_elevated(pid)
-        return self.is_elevated, self.elevation_type
 
-    @staticmethod
-    def set_debug_privilege():
-        """ 프로세스의 상세 정보를 조회 하기 위해서는 "seDebugPrivilege" 권한이 필요하다.
-            그러므로, 현재 프로세스의 권한을 조정한다.
-        """
-        try:
-            htoken = win32security.OpenProcessToken(
-                win32api.GetCurrentProcess(),
-                win32security.TOKEN_ADJUST_PRIVILEGES | win32security.TOKEN_QUERY
-            )
-            id = win32security.LookupPrivilegeValue(None, "seDebugPrivilege")
-            newPrivileges = [(id, win32security.SE_PRIVILEGE_ENABLED)]
-            win32security.AdjustTokenPrivileges(htoken, 0, newPrivileges)
-        except Exception as e:
-            print ('seDebug error')
-            pass
+def get_elevated_n_elevation_type(pid):
+    try:
+        proc_handle = win32api.OpenProcess(
+            win32con.PROCESS_QUERY_INFORMATION | win32con.PROCESS_VM_READ,
+            False,
+            pid
+        )
+        proc_token = win32security.OpenProcessToken(proc_handle, win32con.MAXIMUM_ALLOWED)
 
-    def get_elevated(self,pid):
-        self.set_debug_privilege()
-        try:
-            ph = win32api.OpenProcess(win32con.PROCESS_QUERY_INFORMATION | win32con.PROCESS_VM_READ, False, pid)
-            th = win32security.OpenProcessToken(ph, win32con.MAXIMUM_ALLOWED)
-            is_elevated = win32security.GetTokenInformation(th, win32security.TokenElevation)
-            if int(is_elevated) == 0:
-                self.is_elevated[pid] = [0,"False"]
-            else:
-                self.is_elevated[pid] = [int(is_elevated),"True"]
+        #
+        # 프로세스 권한 상승 유무 정보 가져오기
+        #
+        is_elevated = win32security.GetTokenInformation(proc_token, win32security.TokenElevation)
 
-            elevation_type = win32security.GetTokenInformation(th, win32security.TokenElevationType)
-            if int(elevation_type) == 1:
-                self.elevation_type[pid] = [1, "TokenElevationTypeDefault"]
-            elif int(elevation_type) == 2:
-                self.elevation_type[pid] = [2, "TokenElevationTypeFull"]
-            elif int(elevation_type) == 3:
-                self.elevation_type[pid] = [3, "TokenElevationTypeLimited"]
-            else:
-                self.elevation_type[pid] = [int(elevation_type), "Unknown"]
-
-            # (f"{process_list[pid].name}({pid})\t{is_elevated}\t{elevation_type}")
-        except Exception as e:
-            self.is_elevated[pid]=[None,""]
-            self.elevation_type[pid]=[None,""]
+        #
+        #  프로세스 권한 상승 타입 가져오기
+        #
+        elevation_type = win32security.GetTokenInformation(proc_token, win32security.TokenElevationType)
+        return is_elevated, elevation_type
+    except Exception as ex:
+        raise ex
 
 
 class Process(object):
     """pslist api object 추출
     """
-    def __init__(self, name:str, ppid:int, pid:int, creation_time:float, full_path:str,  cwd:str, cmd:str):
-        self.name = name
+    def __init__(self,
+                 ppid: int,
+                 pid: int,
+                 creation_timestamp: int,
+                 exit_timestamp: int,
+                 name: str,
+                 image_path: str,  cwd: str, cmd: str, is_exists_in_ps_list: bool, is_exists_in_ps_api: bool):
         self.ppid = ppid
+        self.parent_creation_timestamp = 0
+        self.parent_exit_timestamp = 0
+        self.parent_proc_name = ''
+        self.parent_image_path = ''
+        self.parent_cmdline = ''
+        self.parent_elevated = False
+        self.parent_elevation_type = win32security.TokenElevationTypeDefault
+
         self.pid = pid
-        self.creation_time = creation_time
-        self.full_path = full_path
+        self.creation_timestamp = creation_timestamp
+        self.exit_timestamp = exit_timestamp
+        self.name = name
+        self.image_path = image_path
         self.cwd = cwd
         self.cmd = cmd
+
+        self.terminated_process = False
+
+        self.elevation_type = win32security.TokenElevationTypeDefault
+        self.elevated = False
+
+        self.is_exists_in_ps_list = is_exists_in_ps_list
+        self.is_exists_in_ps_api = is_exists_in_ps_api
+
+        self.verify_result = windows.wintrust.VerifyResult.VrUnknown
+        self.signers = []
+        self.sha2 = ''
+
+        # 프로세스의 부가적인 정보 수집 유무를 확인 하는 플래그 값이다.
+        self.prepared = False
+
+    def prepare(self, logging):
+        if len(self.image_path) > 1 and os.path.isfile(self.image_path):
+            self.sha2 = sha256sum(self.image_path)
+            self.verify_result, self.signers = windows.wintrust.verify_file_ex(self.image_path)
+
+        if self.exit_timestamp != 0:
+            try:
+                self.elevated, self.elevation_type = get_elevated_n_elevation_type(self.pid)
+            except Exception as ex:
+                logging.error(f'get_elevated_n_elevation_type() failed. pid={self.pid}, name={self.name}, ex={str(ex)}')
+                self.elevated = False
+                self.elevation_type = win32security.TokenElevationTypeDefault
+        else:
+            self.terminated_process = True
+        self.prepared = True
+
+    def set_parent_info(self,
+                        creation_timestamp: int,
+                        exit_timestamp: int, proc_name: str,
+                        image_path: str, cmdline: str, elevated: bool, elevation_type: int):
+        self.parent_creation_timestamp = creation_timestamp
+        self.parent_exit_timestamp = exit_timestamp
+        self.parent_proc_name = proc_name
+        self.parent_image_path = image_path
+        self.parent_cmdline = cmdline
+        self.parent_elevated = elevated
+        self.parent_elevation_type = elevation_type
+
+    def to_dict(self) -> dict:
+        return dict(
+            ppid=self.ppid,
+            parent_proc_name=self.parent_proc_name,
+            parent_proc_image_path=self.parent_image_path,
+            parent_proc_cmdline=self.parent_cmdline,
+            parent_creation_timestamp=self.parent_creation_timestamp,
+            parent_exit_timestamp=self.parent_creation_timestamp,
+            parent_elevated=self.parent_elevated,
+            parent_elevation_type=self.parent_elevation_type,
+            pid=self.pid,
+            proc_name=self.name,
+            image_path=self.image_path,
+            elevated=self.elevated,
+            elevation_type=self.elevation_type,
+            creation_timestamp=self.creation_timestamp,
+            exit_timestamp=self.exit_timestamp,
+            psscan_driver=True,
+            is_exists_in_ps_api=self.is_exists_in_ps_api,
+            is_exists_in_ps_list=self.is_exists_in_ps_list,
+            sha2=self.sha2,
+            verify_result=self.verify_result,
+            signers=','.join(self.signers)
+        )
 
 
 class ProcessTree:
     """pslist api object 추출
     """
     def __init__(self):
-        self._proc_map = {}
+        self.proc_list = {}
         self._build_process_tree()
-
-    def iterate_process(self):
-        procs = []
-        current_pid = os.getpid()
-        for pid in self._proc_map.keys():
-            p = self._proc_map[pid]
-            if p.pid == current_pid:
-                continue
-            if self._get_parent(p) is None:
-                procs.append(p)
-        return procs
-
-    def process_map(self):
-        return self._proc_map
 
     def _build_process_tree(self):
         for proc in psutil.process_iter():
             try:
                 pinfo = proc.as_dict(attrs=['pid', 'ppid', 'cwd', 'exe', 'name', 'create_time', 'cmdline'])
             except (psutil.NoSuchProcess, psutil.ZombieProcess):
-                pass
+                continue
             except Exception as e:
-                pass
-
+                continue
             else:
                 if pinfo['name'] is None:
                     proc_name = ''
@@ -149,48 +197,15 @@ class ProcessTree:
                                   cwd,
                                   cmdline)
 
-    def _add_process(self, name:str, ppid:int, pid:int, creation_time: float,  full_path:str, cwd:str, cmd:str):
-        p = Process(name, ppid, pid, creation_time, full_path, cwd, cmd)
-        self._proc_map[pid] = p
-
-    def _get_parent(self, process: Process):
-        if process.ppid in self._proc_map:
-            p = self._proc_map[process.ppid]
-            if p.creation_time <= process.creation_time:
-                return p
-            return None
-
-
-def sha256sum(file_path: str, block_size=8192):
-    """sha-1 해시함수 사용
-    """
-    if os.path.exists(file_path) is False:
-        return ""
-    hash_func = hashlib.sha256()
-    with open(file_path, 'rb') as file_object:
-        for block in iter(lambda: file_object.read(block_size), b""):
-            hash_func.update(block)
-    return hash_func.hexdigest()
-
-
-# refac
-# def get_certificates(self):
-#     "디지털 서명 관련 Openssl x509 오브젝트 처리"
-#     certs = _ffi.NULL
-#     if self.type_is_signed():
-#         certs = self._pkcs7.d.sign.cert
-#     elif self.type_is_signedAndEnveloped():
-#         certs = self._pkcs7.d.signed_and_enveloped.cert
-#
-#     pycerts = []
-#     for i in range(_lib.sk_X509_num(certs)):
-#         pycert = X509.__new__(X509)
-#         pycert._x509 = _lib.sk_X509_value(certs, i)
-#         pycerts.append(pycert)
-#
-#     if not pycerts:
-#         return None
-#     return tuple(pycerts)
+    def _add_process(self, name: str, ppid:int, pid: int, creation_time: float,  full_path: str, cwd: str, cmd: str):
+        self.proc_list[pid] = {
+            'name': name,
+            'ppid': ppid,
+            'ctime': creation_time,
+            'image_path': full_path,
+            'cwd': cwd,
+            'cmdline': cmd,
+        }
 
 
 class PSMerge(common.WinScanner):
@@ -214,100 +229,69 @@ class PSMerge(common.WinScanner):
         dict(name="issuer", width=15)
     ]
 
+    __args = [
+        dict(name='output_path',
+             default=os.path.join(
+                 os.path.abspath(os.path.dirname(__file__)), f'psmerge_{datetime.datetime.utcnow().timestamp()}.tsv'))
+    ]
+
     # Only bother to scan non paged pool by default.
     scanner_defaults = dict(
         scan_kernel_nonpaged_pool=True
     )
 
+    proc_driver_list = dict()
+    proc_api_list = dict()
+
+    file_path_cache = {}
+
     @staticmethod
-    def find_image_abs_path(image_name):
+    def find_image_abs_path(proc_name_or_image_path: str):
+        if len(proc_name_or_image_path) <= 1 or proc_name_or_image_path is None:
+            return ''
+
+        # 윈도우 시스템 디렉토리에서 찾아 본다.
+        system_root = os.environ.get('systemroot', 'c:\\windows')
+
+        abs_path = os.path.join(system_root, 'system32', os.path.basename(proc_name_or_image_path))
+        if os.path.exists(abs_path) is True and os.path.isfile(abs_path):
+            return abs_path
+
+        #  윈도우 디렉토리에서 찾아본다.
+        abs_path = os.path.join(system_root, os.path.basename(proc_name_or_image_path))
+        if os.path.exists(abs_path) is True and os.path.isfile(abs_path):
+            return abs_path
+
+        #  PATH 환경 변수에 저장된 디렉토리 경로
+        path_list = os.environ.get('path', '').split(';')
+        for path in path_list:
+            abs_path = os.path.join(path, os.path.basename(proc_name_or_image_path))
+            if os.path.exists(abs_path) is True and os.path.isfile(abs_path):
+                return abs_path
         return ''
-
-    def get_image_path(self, pid, pslist_data):
-        """프로세스 이미지 경로 반환, QueryFullProcessImageNameW, PEB """
-        # 1. 드라이버를 통해 수집한 프로세스 목록과 API를 사용한 프로세스 목록에서 찾을 수 없는 경우
-        #    다음과 같은 순서로 이미지 절대 경로를 찾아 본다.
-        #    1. 윈도우 시스템 디렉토리
-        #    2. 윈도우 디렉토리
-        #    3. PATH 환경 변수에 저장된 디렉토리 경로
-        if pid not in pslist_data and pid not in self.pslist_api:
-            return self.find_image_abs_path('')
-
-        # 2. API를 사용한 프로세스 목록에서 찾을 수 있는 경우
-        if pid in self.pslist_api:
-            return self.pslist_api[pid].full_path
-        
-        # 3. 드라이버 목록인 경우
-        if pid in pslist_data:
-            return str(pslist_data[pid].Peb.ProcessParameters.ImagePathName)
-
-        # 그래도 못찾으면..공백을 반환한다.
-        return ''
-
-    def get_process_name(self, eprocess):
-        """프로세스 이름 반환, 길이 15 짤림 관련"""
-        pid = eprocess.pid.value
-        if pid in self.pslist_api:
-            return self.pslist_api[eprocess.pid.value].name
-        return str(eprocess.name)
 
     def collect(self):
         """Render results in a table."""
         # Try to do a regular process listing so we can compare if the process
         # is known.
-
-        # 파일 DB 처리 부분
-        # cache_data=[]
-        # try:
-        #     file_mtime = int(os.path.getctime('psmerge.dat'))
-        #     now_time = int(time.time())
-        #     if (now_time-file_mtime) < 300:
-        #         with open('psmerge.dat','r') as f:
-        #             line=f.readline()
-        #             while line != '':
-        #                 cache_data.append(int(line))
-        #                 line=f.readline()
-        #             scan_count=1
-        #     else:
-        #         scan_count=0
-        # except FileNotFoundError:
-        #     scan_count=0
+        self.set_debug_privilege()
 
         # print(cache_data)
-        proc_driver_list = self.session.plugins.pslist()
-        pslist_data = {}
+        pslist = self.session.plugins.pslist()
+        for task in pslist.list_eprocess():
+            # self.session.plugins.pslist().filter_processes() -> Eprocess 반환
+            self.proc_driver_list[task.pid.value] = task
 
-        # self.session.plugins.pslist().filter_processes() -> Eprocess 반환
-        for task in proc_driver_list.list_eprocess():
-            pslist_data[task.pid.value] = task
-        pslist_driver = list(pslist_data.keys())
+        # refac ps_list_driver = list(proc_driver_list.keys())
 
-        # These are virtual addresses.
-        known_eprocess = set()
-        known_pids = set()
+        self.proc_api_list = ProcessTree().proc_list
 
-        for task in proc_driver_list.list_eprocess():
-            known_eprocess.add(task)
-            known_pids.add(task.UniqueProcessId)
+        # refac
+        # ps_scan_result = set()
+        # ps_scan_error = set()
+        # json_data = {}
 
-        proc_api_list = ProcessTree().process_map()
-        psscan_result = set()
-        psscan_error = set()
-        json_data = {}
-        except_process=[
-            "OfficeClickToRun.exe",
-            "TeamViewer_Service.exe",
-            "Code.exe",
-            "Teams.exe",
-            "vmware.exe",
-            "cpptools.exe",
-            "EXCEL.EXE",
-            "Typora.exe",
-            "vmware-hostd.exe",
-            "Video.UI.exe"
-        ]
-
-        proc_carving_list = []
+        proc_list = {}
         for run in self.generate_memory_ranges():
             # Just grab the AS and scan it using our scanner
             scanner = PoolScanProcess(session=self.session,
@@ -315,192 +299,133 @@ class PSMerge(common.WinScanner):
                                       address_space=run.address_space)
 
             for _, eprocess in scanner.scan(offset=run.start, maxlen=run.length):
-                proc_carving_list.append(eprocess)
+                pid = eprocess.pid.value
 
-        # with open('psmerge.tsv', 'a', newline="") as f:
-        #     w = csv.writer(f, delimiter='\t')
-        #     known = ""
-        #     if virtual_eprocess in known_eprocess:
-        #         known += "E"
-        #
-        #     if eprocess.UniqueProcessId in known_pids:
-        #         known += "P"
-        #
-        #         # 2021.01.05 추후 elevated Unknown -> '' None 처리 해야함
-        #         is_elevated, elevated_type = GetTokenInformation().token_map(pid)
-        #         is_elevated_p, elevated_type_p = GetTokenInformation().token_map(ppid)
-        #         is_pslist_api = True
-        #         if pid not in list(self.pslist_api.keys()):
-        #             is_pslist_api = False
-        #
-        #         is_pslist_driver = True
-        #         if pid not in pslist_driver:
-        #             is_pslist_driver = False
-        #         print("[+]PE READ START // ",self.get_psname(eprocess))
-        #         start = time.time()
-        #         # cert_object = {}
-        #         try:
-        #             if self.get_process_name(eprocess) in except_process:
-        #                 raise Exception("error")
-        #             image_path = self.get_image_path(pid, pslist_data)
-        #             sha_256 = sha256sum(image_path)
-        #             # pe = pefile.PE(image_path)
-        #
-        #             # address = pe.OPTIONAL_HEADER.DATA_DIRECTORY[
-        #             #     pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_SECURITY"]
-        #             # ].VirtualAddress
-        #             # size = pe.OPTIONAL_HEADER.DATA_DIRECTORY[
-        #             #     pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_SECURITY"]
-        #             # ].Size
-        #
-        #             # if address == 0: #인증서 없는 경우
-        #             #     is_signed = False
-        #             #     cert_object[''] = ''
-        #
-        #             # else:
-        #             #     is_signed = True
-        #             #     signature = pe.write()[address + 8 :]
-        #             #     pkcs = crypto.load_pkcs7_data(crypto.FILETYPE_ASN1, bytes(signature))
-        #             #     certs = get_certificates(pkcs)
-        #             #     for cert in certs:
-        #             #         c = crypto.dump_certificate(crypto.FILETYPE_PEM, cert)
-        #             #         x509 = crypto.load_certificate(crypto.FILETYPE_PEM, c)
-        #
-        #             #         components = x509.get_subject().get_components()+x509.get_issuer().get_components()
-        #             #         cnt=0
-        #             #         key_issuer = ''
-        #             #         for cert_value in components:
-        #
-        #             #             if b'CN' in cert_value:
-        #             #                 if cnt == 0:
-        #             #                     key_issuer = cert_value[1].decode()
-        #             #                     cert_object[key_issuer] = ''
-        #             #                     cnt = cnt+1
-        #             #                 else:
-        #             #                     cert_object[key_issuer]=cert_value[1].decode()
-        #
-        #         except Exception as e:# 풀스캔 결과값에만 오브젝트가 존재할경우
-        #             image_path =''
-        #             sha_256 = ''
-        #             is_signed = ''
-        #             # cert_object[''] = ''
-        #
-        #         print("[+]PE READ END // ",self.get_psname(eprocess))
-        #         print(time.time()-start)
-        #         if int(time.time()-start) >= 1:
-        #             with open("certtime_log.txt","a") as logfile:
-        #                 logfile.write(self.get_psname(eprocess)+" // "+str(image_path)+"\n")
-        #         try:
-        #             if pid==19484:
-        #                 raise Exception("error")
-        #             data = dict(
-        #                 offset_p=eprocess,
-        #                 ppid=ppid,
-        #                 is_elevated=is_elevated[pid][1] or '',
-        #                 elevation_type=elevated_type[pid][1] or '',
-        #                 # whether Parents elevated
-        #                 # is_elevated_p = is_elevated[ppid][1],
-        #                 # elevation_type_p = elevated_type[ppid][1],
-        #                 imagepath=image_path,
-        #                 create_time=eprocess.CreateTime or '',
-        #                 exit_time=eprocess.ExitTime or '',
-        #                 psscan_driver=True,
-        #                 pslist_api=is_pslist_api,
-        #                 pslist_driver=is_pslist_driver,
-        #                 hash_sha256=sha_256,
-        #                 is_signed=is_signed,
-        #                 issuer=''
-        #         )
-        #             tsv_data = dict(
-        #                 name=self.get_psname(eprocess),
-        #                 pid=int(pid),
-        #                 ppid=int(ppid),
-        #                 is_elevated = is_elevated[pid][1],
-        #                 elevation_type = elevated_type[pid][1],
-        #                 is_elevated_p = is_elevated_p[ppid][1],
-        #                 elevation_type_p = elevated_type_p[ppid][1],
-        #                 imagepath=image_path,
-        #                 create_time=eprocess.CreateTime.as_windows_timestamp(),
-        #                 exit_time=eprocess.ExitTime.as_windows_timestamp(),
-        #                 psscan_driver=True,
-        #                 pslist_api=is_pslist_api,
-        #                 pslist_driver=is_pslist_driver,
-        #                 hash_sha256=sha_256,
-        #                 is_signed=is_signed,
-        #                 issuer=''
-        #             )
-        #             w.writerow(tsv_data.values())
-        #             json_data[pid]=tsv_data
-        #
-        #         except Exception as e:
-        #             print(e)
-        #             with open('psscan_error.txt', 'w') as f:
-        #                 f.writelines(str(e))
-        #                 # f.writelines(tsv_data)
-        #                 print(tsv_data, file=f)
-        #                 f.write("\n\n")
-        #             psscan_error.add(pid)
-        #
-        #         psscan_result.add(pid)
-        #
-        #         yield data
-        #
-        #
-        # # with open('psmerge.dat','a') as f:
-        # #     for pid in psscan_result:
-        # #         f.write(str(pid)+'\n')
-        # print(psscan_error)
-        # try:
-        #     print(os.get_terminal_size().columns*"-")
-        # except Exception as e:
-        #     print("---Debug mode---")
-        #
-        # print(f"[+]PSSCAN count : {len(psscan_result)}\n")
-        # print("[List of processes not included in PSSCAN results]\n")
-        # # if scan_count==False:
-        # #     psscan_error=psscan_error | (set(list(self.pslist_api.keys())).difference(psscan_result))
-        # # else:
-        # #     pass
-        # print((set(list(self.pslist_api.keys())).difference(psscan_result)))
-        # psscan_error=psscan_error | (set(list(self.pslist_api.keys())).difference(psscan_result))
-        #
-        # index=0
-        # data={}
-        # if len(psscan_error) != 0:
-        #     for pid_num in psscan_error:
-        #         index += 1
-        #         is_elevated, elevated_type=GetTokenInformation().token_map(pid_num)
-        #         try:
-        #             data =dict(
-        #                 name = self.pslist_api[pid_num].name,
-        #                 process_id = self.pslist_api[pid_num].pid,
-        #                 ppid = self.pslist_api[pid_num].ppid,
-        #                 elevated = is_elevated[pid_num][1],
-        #                 elevation_type = elevated_type[pid_num][1],
-        #                 is_elevated_p = '',
-        #                 elevation_type_p = '',
-        #                 imagepath=self.pslist_api[pid_num].full_path,
-        #                 create_time=datetime.datetime.fromtimestamp(self.pslist_api[pid_num].creation_time).strftime("%Y-%m-%d %H:%M:%S"),
-        #                 exit_time='',
-        #                 psscan_driver=False,
-        #                 pslist_api=True,
-        #                 pslist_driver=False,
-        #                 hash_sha256='',
-        #                 is_signed='',
-        #                 issuer='',
-        #             )
-        #
-        #             json_data[data['process_id']] = data
-        #
-        #         except Exception as e:
-        #             # 모든 결과값을 충족하지 못 할 경우
-        #             pass
-        #
-        #         print(data)
-        # # print(json_data)
-        #         # print(f" [{index}] {data['name']}\tPID: {data['process_id']}\tPPID: {data['ppid']}\timagepath: {data['path']}")
-        #         # print(f"\tcreat_time: {data['creation_time']}\t\tis_elevated: {data['elevated']}\televation_type: {data['elevated_type']}")
-        #
-        # with open('psmerge.json','w',encoding='utf-8') as f:
-        #     json.dump(json_data, f, ensure_ascii=False, indent='\t')
+                # eprocess 구조체에 있는 프로세스명은 최대 16글자만 표현 되므로, psutil에서 가져온다.
+                if pid in self.proc_api_list:
+                    proc_name = self.proc_api_list[pid]['name']
+                else:
+                    proc_name = str(eprocess.name)
 
+                if proc_name == 'cmd.exe':
+                    temp = 0
+
+                #
+                # 종료 되지 않은 프로세스임에도 불구 하고,
+                # eprocess.Peb.ProcessParameters.ImagePathName 값이 공백인 경우가 존재한다.
+                #
+                key = str(eprocess.Peb.ProcessParameters.ImagePathName)
+                if len(key) <= 1:
+                    key = proc_name
+
+                if key in self.file_path_cache:
+                    image_path = self.file_path_cache[key]
+                else:
+                    image_path = self.get_image_path(pid, key)
+                    if len(image_path) > 1:
+                        self.file_path_cache[key] = image_path
+
+                proc = Process(
+                    ppid=eprocess.InheritedFromUniqueProcessId,
+                    pid=pid,
+                    creation_timestamp=eprocess.CreateTime.as_windows_timestamp(),
+                    exit_timestamp=eprocess.ExitTime.as_windows_timestamp(),
+                    name=proc_name,
+                    image_path=image_path,
+                    cwd='',
+                    cmd=eprocess.Peb.ProcessParameters.CommandLine,
+                    is_exists_in_ps_list=eprocess.pid.value in self.proc_driver_list,
+                    is_exists_in_ps_api=eprocess.pid.value in self.proc_api_list
+                )
+                proc.prepare(self.session.logging)
+
+                assert proc.prepared is True
+                proc_list[proc.pid] = proc
+
+                if run.data["type"] == "PhysicalAS":
+                    # Switch address space from physical to virtual.
+                    virtual_eprocess = (
+                        pslist.virtual_process_from_physical_offset(eprocess))
+                else:
+                    virtual_eprocess = eprocess
+
+                yield dict(
+                    offset_p=virtual_eprocess,
+                    ppid=eprocess.InheritedFromUniqueProcessId,
+                    is_elevated=proc.elevated,
+                    elevation_type=proc.elevation_type,
+                    imagepath=proc.image_path,
+                    create_time=eprocess.CreateTime or '',
+                    exit_time=eprocess.ExitTime or '',
+                    psscan_driver=True,
+                    pslist_api=proc.is_exists_in_ps_api,
+                    pslist_driver=proc.is_exists_in_ps_list,
+                    hash_sha256=proc.sha2,
+                    is_signed=proc.verify_result,
+                    issuer=','.join(proc.signers)
+                )
+
+        exporter = Exporter(self.plugin_args.output_path)
+        for pid, proc in proc_list.items():
+            if proc.ppid in proc_list:
+                pproc = proc_list[proc.ppid]
+                proc.set_parent_info(
+                    creation_timestamp=pproc.creation_timestamp,
+                    exit_timestamp=pproc.exit_timestamp,
+                    proc_name=pproc.name,
+                    image_path=pproc.image_path,
+                    cmdline=pproc.cmd,
+                    elevated=pproc.elevated,
+                    elevation_type=pproc.elevation_type
+                )
+            exporter.export_to_tsv(proc.to_dict().values())
+        del exporter
+
+    def get_image_path(self, pid: int, proc_name_or_image_path: str):
+        """ 프로세스 이미지 경로 반환, QueryFullProcessImageNameW, PEB
+        """
+        # 1. 드라이버를 통해 수집한 프로세스 목록과 API를 사용한 프로세스 목록에서 찾을 수 없는 경우
+        #    다음과 같은 순서로 이미지 절대 경로를 찾아 본다.
+        #    1. 윈도우 시스템 디렉토리
+        #    2. 윈도우 디렉토리
+        #    3. PATH 환경 변수에 저장된 디렉토리 경로
+        if pid not in self.proc_driver_list and pid not in self.proc_api_list:
+            # 이미지 경로가 "-"인 경우를 체크 한다.
+            if len(proc_name_or_image_path) <= 1:
+                return ''
+            return self.find_image_abs_path(proc_name_or_image_path)
+
+        # 2. API를 사용한 프로세스 목록에서 찾을 수 있는 경우
+        abs_path = ''
+        if pid in self.proc_api_list:
+            abs_path = self.proc_api_list[pid]['image_path']
+
+        # 3. 드라이버 목록인 경우
+        if pid in self.proc_driver_list:
+            abs_path = str(self.proc_driver_list[pid].Peb.ProcessParameters.ImagePathName)
+
+        if len(abs_path) <= 1:
+            return self.find_image_abs_path(proc_name_or_image_path)
+
+        return abs_path
+
+    @staticmethod
+    def set_debug_privilege():
+        """ 프로세스의 상세 정보를 조회 하기 위해서는 "seDebugPrivilege" 권한이 필요하다.
+            그러므로, 현재 프로세스의 권한을 조정한다.
+        """
+        try:
+            proc_token = win32security.OpenProcessToken(
+                win32api.GetCurrentProcess(),
+                win32security.TOKEN_ADJUST_PRIVILEGES | win32security.TOKEN_QUERY
+            )
+            privilege_id = win32security.LookupPrivilegeValue(None, "seDebugPrivilege")
+            win32security.AdjustTokenPrivileges(
+                proc_token,
+                0,
+                [
+                    (privilege_id, win32security.SE_PRIVILEGE_ENABLED)
+                ]
+            )
+        except Exception as ex:
+            raise ex
