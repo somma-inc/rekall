@@ -17,6 +17,7 @@ import ntpath
 
 import win32api
 import win32con
+import windows
 
 from rekall.plugins.tools.exporter import Exporter
 from rekall.plugins.windows import common
@@ -150,7 +151,7 @@ class Process(object):
             is_exists_in_ps_list=self.is_exists_in_ps_list,
             sha2=self.sha2,
             verify_result=self.verify_result,
-            signers=','.join(self.signers)
+            signers='|'.join(self.signers)
         )
 
 
@@ -351,6 +352,7 @@ class PSMerge(common.WinScanner):
                 yield dict(
                     offset_p=virtual_eprocess,
                     ppid=eprocess.InheritedFromUniqueProcessId,
+                    imagepath=proc.image_path,
                     is_elevated=proc.elevated,
                     elevation_type=proc.elevation_type,
                     create_time=eprocess.CreateTime or '',
