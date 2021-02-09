@@ -115,9 +115,8 @@ class WinNetscan(tcpip_vtypes.TcpipPluginMixin,
     ]
 
     __args = [
-        dict(name='output_path',
-             default=os.path.join(
-                 os.path.abspath(os.path.dirname(__file__)), f'netscan_{datetime.datetime.utcnow().timestamp()}.tsv'))
+        dict(name='output',
+             default=os.path.join('.', f'netscan_{datetime.datetime.utcnow().timestamp()}.tsv'))
     ]
 
 
@@ -215,7 +214,7 @@ class WinNetscan(tcpip_vtypes.TcpipPluginMixin,
 
     def collect(self):
         netscan_dict={}
-        exporter = Exporter(self.plugin_args.output_path)
+        exporter = Exporter(self.plugin_args.output)
         for run in self.generate_memory_ranges():
             for (net_object, proto, laddr, lport, raddr, rport,
                  state) in self.generate_hits(run):

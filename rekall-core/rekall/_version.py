@@ -15,7 +15,7 @@ def raw_versions():
     "codename": "Hurricane Ridge",
     "post": "0",
     "rc": "1",
-    "version": "1.7.2"
+    "version": "1.7.3"
 }
 """)
 

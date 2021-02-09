@@ -230,9 +230,8 @@ class PSMerge(common.WinScanner):
     ]
 
     __args = [
-        dict(name='output_path',
-             default=os.path.join(
-                 os.path.abspath(os.path.dirname(__file__)), f'psmerge_{datetime.datetime.utcnow().timestamp()}.tsv'))
+        dict(name='output',
+             default=os.path.join('.', f'psmerge_{datetime.datetime.utcnow().timestamp()}.tsv'))
     ]
 
     # Only bother to scan non paged pool by default.
@@ -365,7 +364,7 @@ class PSMerge(common.WinScanner):
                     issuer=','.join(proc.signers)
                 )
 
-        exporter = Exporter(self.plugin_args.output_path)
+        exporter = Exporter(self.plugin_args.output)
         for pid, proc in proc_list.items():
             if proc.ppid in proc_list:
                 pproc = proc_list[proc.ppid]

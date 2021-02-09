@@ -12,7 +12,7 @@ class Exporter:
         # 이전 파일이 있는 경우 무조건 지우고 새로 만든다.
         if os.path.exists(file_path) is True:
             os.remove(file_path)
-        self.file_handle = open(file_path, 'w+', encoding='utf-8', newline='')
+        self.file_handle = open(file_path, 'w', encoding='utf-8', newline='')
         self.exporter = csv.writer(self.file_handle, delimiter='\t')
 
     def __del__(self):
