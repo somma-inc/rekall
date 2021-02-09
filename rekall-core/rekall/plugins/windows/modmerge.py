@@ -3,7 +3,10 @@ import os
 from rekall.plugins.windows.modscan import PoolScanModuleFast
 from rekall.plugins.windows import common
 from rekall.plugins.windows import modules
+from rekall.plugins.tools.exporter import Exporter
 
+import os
+import datetime
 
 
 class ModMerge(common.PoolScannerPlugin):
@@ -20,6 +23,12 @@ class ModMerge(common.PoolScannerPlugin):
         dict(name="is_modules")
     ]
 
+    __args = [
+        dict(name='output_path',
+             default=os.path.join(
+                 os.path.abspath(os.path.dirname(__file__)), f'modmerge_{datetime.datetime.utcnow().timestamp()}.tsv'))
+    ]
+    
     scanner_defaults = dict(
         scan_kernel_nonpaged_pool=True
     )
@@ -34,6 +43,7 @@ class ModMerge(common.PoolScannerPlugin):
         for module in modules.Modules.lsmod(self):
             module_offset.add(module.obj_offset)
         
+
         #Plugin : unloaded_modules
         unloaded_table = self.profile.get_constant_object(
             "MmUnloadedDrivers",
@@ -63,11 +73,13 @@ class ModMerge(common.PoolScannerPlugin):
             )
 
         #Plugin : modscan
+        exporter = Exporter(self.plugin_args.output_path)
+
         for run in self.generate_memory_ranges():
             scanner = PoolScanModuleFast(profile=self.profile,
                                          session=self.session,
                                          address_space=run.address_space)
-
+            
             for pool_obj in scanner.scan(run.start, run.length):
                 is_modules=''
                 if not pool_obj:
@@ -95,8 +107,13 @@ class ModMerge(common.PoolScannerPlugin):
                 except Exception as e:
                     is_exists_in_modules="error"
 
+                modmerge_dict=dict(
+                    dllname = ldr_entry.BaseDllName.v(vm=self.kernel_address_space),
+                    dllsize = ldr_entry.SizeOfImage,
+                    dllpath = ldr_entry.FullDllName.v(vm=self.kernel_address_space)
+                )
                 
-
+                exporter.export_to_tsv(modmerge_dict.values())
                 yield (ldr_entry.obj_offset,
                        ldr_entry.BaseDllName.v(vm=self.kernel_address_space),
                        ldr_entry.DllBase,
@@ -110,8 +127,12 @@ class ModMerge(common.PoolScannerPlugin):
         # print(int(os.get_terminal_size().columns/2) * "-")
 
         for driver in unloaded_table:
-            print(dir(driver))
-
+            unload_dict=dict(
+                dllname = driver.Name,
+                dllsize = '',
+                dllpath = ''
+            )
+            exporter.export_to_tsv(unload_dict.values())
             print(driver.Name,"\t\t",
             driver.StartAddress.v(),"\t",
             driver.EndAddress.v(),"\t",
