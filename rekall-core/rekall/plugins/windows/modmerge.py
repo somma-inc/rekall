@@ -24,9 +24,9 @@ class ModMerge(common.PoolScannerPlugin):
     ]
 
     __args = [
-        dict(name='output_path',
+        dict(name='output_file',
              default=os.path.join(
-                 os.path.abspath(os.path.dirname(__file__)), f'modmerge_{datetime.datetime.utcnow().timestamp()}.tsv'))
+                 '.', f'modmerge_{datetime.datetime.utcnow().timestamp()}.tsv'))
     ]
     
     scanner_defaults = dict(

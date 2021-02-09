@@ -115,10 +115,9 @@ class WinNetscan(tcpip_vtypes.TcpipPluginMixin,
     ]
 
     __args = [
-        dict(name='output',
+        dict(name='output_file',
              default=os.path.join('.', f'netscan_{datetime.datetime.utcnow().timestamp()}.tsv'))
     ]
-
 
     scanner_defaults = dict(
         scan_kernel_nonpaged_pool=True

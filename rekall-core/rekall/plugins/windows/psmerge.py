@@ -230,7 +230,7 @@ class PSMerge(common.WinScanner):
     ]
 
     __args = [
-        dict(name='output',
+        dict(name='output_file',
              default=os.path.join('.', f'psmerge_{datetime.datetime.utcnow().timestamp()}.tsv'))
     ]
 
@@ -281,14 +281,7 @@ class PSMerge(common.WinScanner):
             # self.session.plugins.pslist().filter_processes() -> Eprocess 반환
             self.proc_driver_list[task.pid.value] = task
 
-        # refac ps_list_driver = list(proc_driver_list.keys())
-
         self.proc_api_list = ProcessTree().proc_list
-
-        # refac
-        # ps_scan_result = set()
-        # ps_scan_error = set()
-        # json_data = {}
 
         proc_list = {}
         for run in self.generate_memory_ranges():
