@@ -131,27 +131,28 @@ class Process(object):
 
     def to_dict(self) -> dict:
         return dict(
+            pid=self.pid,
             ppid=self.ppid,
             parent_proc_name=self.parent_proc_name,
             parent_proc_image_path=self.parent_image_path,
             parent_proc_cmdline=self.parent_cmdline,
             parent_creation_timestamp=self.parent_creation_timestamp,
             parent_exit_timestamp=self.parent_creation_timestamp,
-            parent_elevated=self.parent_elevated,
             parent_elevation_type=self.parent_elevation_type,
-            pid=self.pid,
+            parent_elevated=1 if self.parent_elevated else 0,
             proc_name=self.name,
             image_path=self.image_path,
-            elevated=self.elevated,
-            elevation_type=self.elevation_type,
+            cmdline=self.cmd,
             creation_timestamp=self.creation_timestamp,
             exit_timestamp=self.exit_timestamp,
-            psscan_driver=True,
-            is_exists_in_ps_api=self.is_exists_in_ps_api,
-            is_exists_in_ps_list=self.is_exists_in_ps_list,
-            sha2=self.sha2,
+            elevation_type=self.elevation_type,
+            elevated=1 if self.elevated else 0,
             verify_result=self.verify_result,
-            signers='|'.join(self.signers)
+            signers='|'.join(self.signers),
+            sha2=self.sha2,
+            is_exists_in_ps_scan=1,
+            is_exists_in_ps_api=1 if self.is_exists_in_ps_api else 0,
+            is_exists_in_ps_list=1 if self.is_exists_in_ps_list else 0,
         )
 
 
@@ -231,7 +232,8 @@ class PSMerge(common.WinScanner):
 
     __args = [
         dict(name='output_file',
-             default=os.path.join('.', f'psmerge_{datetime.datetime.utcnow().timestamp()}.tsv'))
+             default=os.path.join('.', f'psmerge_{datetime.datetime.utcnow().timestamp()}.tsv'),
+             help='output file specific path')
     ]
 
     # Only bother to scan non paged pool by default.
@@ -298,10 +300,6 @@ class PSMerge(common.WinScanner):
                     proc_name = self.proc_api_list[pid]['name']
                 else:
                     proc_name = str(eprocess.name)
-
-                if proc_name == 'cmd.exe':
-                    temp = 0
-
                 #
                 # 종료 되지 않은 프로세스임에도 불구 하고,
                 # eprocess.Peb.ProcessParameters.ImagePathName 값이 공백인 경우가 존재한다.
@@ -317,6 +315,8 @@ class PSMerge(common.WinScanner):
                     if len(image_path) > 1:
                         self.file_path_cache[key] = image_path
 
+                cmdline = self.get_cmdline(pid)
+
                 proc = Process(
                     ppid=eprocess.InheritedFromUniqueProcessId,
                     pid=pid,
@@ -325,7 +325,7 @@ class PSMerge(common.WinScanner):
                     name=proc_name,
                     image_path=image_path,
                     cwd='',
-                    cmd=eprocess.Peb.ProcessParameters.CommandLine,
+                    cmd=cmdline,
                     is_exists_in_ps_list=eprocess.pid.value in self.proc_driver_list,
                     is_exists_in_ps_api=eprocess.pid.value in self.proc_api_list
                 )
@@ -357,7 +357,7 @@ class PSMerge(common.WinScanner):
                     issuer=','.join(proc.signers)
                 )
 
-        exporter = Exporter(self.plugin_args.output)
+        exporter = Exporter(self.plugin_args.output_file)
         for pid, proc in proc_list.items():
             if proc.ppid in proc_list:
                 pproc = proc_list[proc.ppid]
@@ -400,6 +400,14 @@ class PSMerge(common.WinScanner):
             return self.find_image_abs_path(proc_name_or_image_path)
 
         return abs_path
+
+    def get_cmdline(self, pid):
+        if pid not in self.proc_driver_list and pid not in self.proc_api_list:
+            return ''
+        if pid in self.proc_api_list:
+            return self.proc_api_list[pid]['cmdline']
+        if pid in self.proc_driver_list:
+            return str(self.proc_driver_list[pid].Peb.ProcessParameters.CommandLine)
 
     @staticmethod
     def set_debug_privilege():

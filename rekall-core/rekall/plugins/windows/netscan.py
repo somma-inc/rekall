@@ -213,7 +213,7 @@ class WinNetscan(tcpip_vtypes.TcpipPluginMixin,
 
     def collect(self):
         netscan_dict={}
-        exporter = Exporter(self.plugin_args.output)
+        exporter = Exporter(self.plugin_args.output_file)
         for run in self.generate_memory_ranges():
             for (net_object, proto, laddr, lport, raddr, rport,
                  state) in self.generate_hits(run):

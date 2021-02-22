@@ -73,7 +73,7 @@ class ModMerge(common.PoolScannerPlugin):
             )
 
         #Plugin : modscan
-        exporter = Exporter(self.plugin_args.output_path)
+        exporter = Exporter(self.plugin_args.output_file)
 
         for run in self.generate_memory_ranges():
             scanner = PoolScanModuleFast(profile=self.profile,

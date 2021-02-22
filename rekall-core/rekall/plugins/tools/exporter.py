@@ -13,7 +13,7 @@ class Exporter:
         if os.path.exists(file_path) is True:
             os.remove(file_path)
         self.file_handle = open(file_path, 'w', encoding='utf-8', newline='')
-        self.exporter = csv.writer(self.file_handle, delimiter='\t')
+        self.exporter = csv.writer(self.file_handle, delimiter='\t', quoting=csv.QUOTE_NONNUMERIC)
 
     def __del__(self):
         self.file_handle.close()
