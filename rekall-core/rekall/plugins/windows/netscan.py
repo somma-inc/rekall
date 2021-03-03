@@ -224,15 +224,23 @@ class WinNetscan(tcpip_vtypes.TcpipPluginMixin,
                     vm=self.kernel_address_space, profile=self.session.profile)
                 # print(os.get_terminal_size().columns*"-")
 
+                if owner.ImageFileName is None or len(owner.ImageFileName) <= 0:
+                    temp = 0
+
                 netscan_dict=dict(
                     protocol=proto,
-                    src_ip=lendpoint,
-                    dst_ip=rendpoint,
-                    state=state,
-                    pid=owner.UniqueProcessId,
-                    process_name=owner.ImageFileName,
+                    src_ip=laddr,
+                    src_port=lport,
+                    dst_ip=raddr,
+                    dst_port=rport,
+                    state='' if state is None else state,
+                    pid='' if owner.UniqueProcessId is None else owner.UniqueProcessId,
+                    process_name='' if len(owner.ImageFileName) <= 0 else owner.ImageFileName,
                     create_time=net_object.CreateTime.as_windows_timestamp()
                 )
+                if len(netscan_dict.values()) != 9:
+                    temp = 0
+                self.session.logging.info('values, length: {}'.format(len(netscan_dict.values())))
                 exporter.export_to_tsv(netscan_dict.values())
                 # print(dir(net_object.CreateTime))
                 yield (net_object.obj_offset, proto, lendpoint,
