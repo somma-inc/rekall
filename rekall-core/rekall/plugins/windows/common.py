@@ -427,10 +427,10 @@ class WinProcessFilter(WindowsCommandPlugin):
     # Maintain the order of methods.
     METHODS = [
         "PsActiveProcessHead",
-        "CSRSS",
-        "PspCidTable",
-        "Sessions",
-        "Handles",
+        # "CSRSS",
+        # "PspCidTable",
+        # "Sessions",
+        # "Handles",
         ]
 
     __args = [

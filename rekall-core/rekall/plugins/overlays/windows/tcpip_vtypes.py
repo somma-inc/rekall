@@ -18,6 +18,7 @@
 #
 from builtins import object
 import socket
+import platform
 
 from rekall import kb
 from rekall import obj
@@ -495,12 +496,12 @@ tcpip_vtypes_win7_64 = {
         'Owner' : [0x238, ['pointer', ['_EPROCESS']]],
     }],
     '_TCP_SYN_ENDPOINT': [None, {
-        'InetAF' : [0x48, ['pointer', ['_INETAF']]],
-        'LocalPort' : [0x7c, ['unsigned be short']],
-        'RemotePort' : [0x7e, ['unsigned be short']],
-        'LocalAddr' : [0x50, ['pointer', ['_LOCAL_ADDRESS']]],
-        'RemoteAddress' : [0x68, ['pointer', ['_IN_ADDR']]],
-        'Owner' : [0x58, ['pointer', ['_SYN_OWNER']]],
+        'InetAF': [0x48, ['pointer', ['_INETAF']]],
+        'LocalPort': [0x7c, ['unsigned be short']],
+        'RemotePort': [0x7e, ['unsigned be short']],
+        'LocalAddr': [0x50, ['pointer', ['_LOCAL_ADDRESS']]],
+        'RemoteAddress': [0x68, ['pointer', ['_IN_ADDR']]],
+        'Owner': [0x58, ['pointer', ['_SYN_OWNER']]],
     }],
     '_TCP_TIMEWAIT_ENDPOINT': [None, {
         'InetAF' : [0x30, ['pointer', ['_INETAF']]],
@@ -575,26 +576,115 @@ win7_x86_dynamic_overlays = {
 # Structures for netscan on x32 Win10
 tcpip_vtypes_win10_32 = {
     '_ADDRINFO' : [None, {
-        'Local' : [0x0, ['pointer', ['_LOCAL_ADDRESS']]],
-        'Remote' : [0xC, ['pointer', ['_IN_ADDR']]],
+        'Local': [0x0, ['pointer', ['_LOCAL_ADDRESS']]],
+        'Remote': [0xC, ['pointer', ['_IN_ADDR']]],
     }],
     '_TCP_ENDPOINT': [None, { # TcpE
-        'InetAF' : [0x8, ['pointer', ['_INETAF']]],
-        'AddrInfo' : [0xC, ['pointer', ['_ADDRINFO']]],
-        'State' : [0x38, ['Enumeration', dict(
+        'InetAF': [0x8, ['pointer', ['_INETAF']]],
+        'AddrInfo': [0xC, ['pointer', ['_ADDRINFO']]],
+        'State': [0x38, ['Enumeration', dict(
             target='long',
             choices=TCP_STATE_ENUM)]],
-        'LocalPort' : [0x3C, ['unsigned be short']],
-        'RemotePort' : [0x3E, ['unsigned be short']],
-        'Owner' : [0x1B0, ['pointer', ['_EPROCESS']]],
+        'LocalPort': [0x3C, ['unsigned be short']],
+        'RemotePort': [0x3E, ['unsigned be short']],
+        'Owner': [0x1B0, ['pointer', ['_EPROCESS']]],
+    }],
+}
+
+tcpip_vtypes_win10_32_17134 = {
+    '_IN_ADDR': [0x6, {
+        'addr4': [0x0, ['Ipv4Address']],
+        'addr6': [0x0, ['Ipv6Address']],
+    }],
+    '_TCP_LISTENER': [0x40, { # TcpL
+        'Owner': [0x18, ['pointer', ['_EPROCESS']]],
+        'CreateTime': [0x20, ['WinFileTime', {}]],
+        'LocalAddr': [0x34, ['pointer', ['_LOCAL_ADDRESS']]],
+        'InetAF': [0x38, ['pointer', ['_INETAF']]],
+        'Port': [0x3E, ['unsigned be short']],
+    }],
+    '_INETAF': [0x1A, {
+        'AddressFamily': [0x18, ['unsigned short']],
+    }],
+    '_LOCAL_ADDRESS_WIN10_UDP' : [0x4, {
+        'pData' : [0x0, ['pointer', ['_IN_ADDR']]],
+    }],
+    '_LOCAL_ADDRESS': [0x14, {
+        'pData' : [0x10, ['pointer', ['pointer', ['_IN_ADDR']]]],
+    }],
+    '_ADDRINFO': [0x4, {
+        'Local': [0x0, ['pointer', ['_LOCAL_ADDRESS']]],
+        'Remote': [0x10, ['pointer', ['_IN_ADDR']]],
+    }],
+    '_TCP_ENDPOINT': [0x278, { # TcpE
+        'InetAF': [0x8, ['pointer', ['_INETAF']]],
+        'AddrInfo': [0xC, ['pointer', ['_ADDRINFO']]],
+        'State': [0x38, ['Enumeration', dict(
+            target='long',
+            choices=TCP_STATE_ENUM)]],
+        'LocalPort': [0X3C, ['unsigned be short']],
+        'RemotePort': [0x3E, ['unsigned be short']],
+        'Owner': [0x1CC, ['pointer', ['_EPROCESS']]],
+        'CreateTime': [0x0, ['WinFileTime', {}]],
+    }],
+    '_UDP_ENDPOINT': [0x4A, { # UdpA
+        'Owner': [0x18, ['pointer', ['_EPROCESS']]],
+        'CreateTime': [0x30, ['WinFileTime', {}]],
+        'LocalAddr': [0x38, ['pointer', ['_LOCAL_ADDRESS']]],
+        'InetAF': [0x14, ['pointer', ['_INETAF']]],
+        'Port': [0x44, ['unsigned be short']],
+    }],
+}
+
+tcpip_vtypes_win10_32_19041 = {
+    '_IN_ADDR': [None, {
+        'addr4': [0x0, ['Ipv4Address']],
+        'addr6': [0x0, ['Ipv6Address']],
+    }],
+    '_ADDRINFO': [None, {
+        'Local': [0x0, ['pointer', ['_LOCAL_ADDRESS']]],
+        'Remote': [0x10, ['pointer', ['_IN_ADDR']]],
+    }],
+    '_TCP_ENDPOINT': [0x278, { # TcpE
+        'InetAF': [0x10, ['pointer', ['_INETAF']]],
+        'AddrInfo': [0x18, ['pointer', ['_ADDRINFO']]],
+        'State': [0x6C, ['Enumeration', dict(
+            target='long',
+            choices=TCP_STATE_ENUM)]],
+        'LocalPort': [0x70, ['unsigned be short']],
+        'RemotePort': [0x72, ['unsigned be short']],
+        'Owner': [0x270, ['pointer', ['_EPROCESS']]],
+    }],
+    '_UDP_ENDPOINT': [0x84, { # UdpA
+        'Owner': [0x28, ['pointer', ['_EPROCESS']]],
+        'CreateTime': [0x58, ['WinFileTime', {}]],
+        'LocalAddr': [0xA0, ['pointer', ['_LOCAL_ADDRESS']]],
+        'InetAF': [0x20, ['pointer', ['_INETAF']]],
+        'Port': [0x98, ['unsigned be short']],
+    }],
+    '_TCP_LISTENER': [0x74, { # TcpL
+        'Owner': [0x30, ['pointer', ['_EPROCESS']]],
+        'CreateTime': [0x40, ['WinFileTime', {}]],
+        'LocalAddr': [0x60, ['pointer', ['_LOCAL_ADDRESS']]],
+        'InetAF': [0x28, ['pointer', ['_INETAF']]],
+        'Port': [0x72, ['unsigned be short']],
+    }],
+    '_INETAF': [None, {
+        'AddressFamily': [0x18, ['unsigned short']],
+    }],
+    '_LOCAL_ADDRESS_WIN10_UDP' : [None, {
+        'pData': [0x0, ['pointer', ['_IN_ADDR']]],
+    }],
+    '_LOCAL_ADDRESS': [None, {
+        'pData': [0x10, ['pointer', ['pointer', ['_IN_ADDR']]]],
     }],
 }
 
 # Structures for netscan on x64 Win10
 tcpip_vtypes_win10_64 = {
-    '_IN_ADDR' : [None, {
-        'addr4' : [0x0, ['Ipv4Address']],
-        'addr6' : [0x0, ['Ipv6Address']],
+    '_IN_ADDR': [None, {
+        'addr4': [0x0, ['Ipv4Address']],
+        'addr6': [0x0, ['Ipv6Address']],
     }],
     '_TCP_LISTENER': [0x74, { # TcpL
         'Owner' : [0x30, ['pointer', ['_EPROCESS']]],
@@ -604,7 +694,7 @@ tcpip_vtypes_win10_64 = {
         'Port' : [0x72, ['unsigned be short']],
     }],
     '_INETAF' : [None, {
-        'AddressFamily' : [0x18, ['unsigned short']],
+        'AddressFamily': [0x18, ['unsigned short']],
     }],
     '_LOCAL_ADDRESS_WIN10_UDP' : [None, {
         'pData' : [0x0, ['pointer', ['_IN_ADDR']]],
@@ -636,10 +726,130 @@ tcpip_vtypes_win10_64 = {
     }],
 }
 
+tcpip_vtypes_win10_64_18363 = {
+    '_IN_ADDR': [None, {
+        'addr4': [0x0, ['Ipv4Address']],
+        'addr6': [0x0, ['Ipv6Address']],
+    }],
+    '_TCP_LISTENER': [0x74, { # TcpL
+        'Owner': [0x30, ['pointer', ['_EPROCESS']]],
+        'CreateTime': [0x40, ['WinFileTime', {}]],
+        'LocalAddr': [0x60, ['pointer', ['_LOCAL_ADDRESS']]],
+        'InetAF': [0x28, ['pointer', ['_INETAF']]],
+        'Port': [0x72, ['unsigned be short']],
+    }],
+    '_INETAF': [0x1A, {
+        'AddressFamily': [0x18, ['unsigned short']],
+    }],
+    '_LOCAL_ADDRESS_WIN10_UDP' : [0x4, {
+        'pData' : [0x0, ['pointer', ['_IN_ADDR']]],
+    }],
+    '_LOCAL_ADDRESS': [0x14, {
+        'pData' : [0x10, ['pointer', ['pointer', ['_IN_ADDR']]]],
+    }],
+    '_ADDRINFO': [0x4, {
+        'Local': [0x0, ['pointer', ['_LOCAL_ADDRESS']]],
+        'Remote': [0x10, ['pointer', ['_IN_ADDR']]],
+    }],
+    '_TCP_ENDPOINT': [0x278, { # TcpE
+        'InetAF': [0x10, ['pointer', ['_INETAF']]],
+        'AddrInfo': [0x18, ['pointer', ['_ADDRINFO']]],
+        'State': [0x6c, ['Enumeration', dict(
+            target='long',
+            choices=TCP_STATE_ENUM)]],
+        'LocalPort': [0x70, ['unsigned be short']],
+        'RemotePort': [0x72, ['unsigned be short']],
+        'Owner': [0x290, ['pointer', ['_EPROCESS']]],
+        'CreateTime': [0x2A0, ['WinFileTime', {}]],
+    }],
+    '_UDP_ENDPOINT': [0x84, { # UdpA
+        'Owner': [0x28, ['pointer', ['_EPROCESS']]],
+        'CreateTime': [0x58, ['WinFileTime', {}]],
+        'LocalAddr': [0xA8, ['pointer', ['_LOCAL_ADDRESS_WIN10_UDP']]],
+        'InetAF': [0x20, ['pointer', ['_INETAF']]],
+        'Port': [0x80, ['unsigned be short']],
+    }],
+}
+
+
+tcpip_vtypes_win10_64_19041 = {
+    '_IN_ADDR': [None, {
+        'addr4': [0x0, ['Ipv4Address']],
+        'addr6': [0x0, ['Ipv6Address']],
+    }],
+    '_TCP_LISTENER': [0x80, { # TcpL
+        'InetAF': [0x28, ['pointer', ['_INETAF']]],
+        'Owner': [0x30, ['pointer', ['_EPROCESS']]],
+        'CreateTime': [0x40, ['WinFileTime', {}]],
+        'LocalAddr': [0x60, ['pointer', ['_LOCAL_ADDRESS']]],
+        'Port': [0x72, ['unsigned be short']],
+        'MaskedPrevObj': [0x78, ['pointer', ['_TCP_LISTENER']]]
+    }],
+    '_INETAF': [0x1A, {
+        'AddressFamily': [0x18, ['unsigned short']],
+    }],
+    '_LOCAL_ADDRESS_WIN10_UDP' : [0x4, {
+        'pData' : [0x0, ['pointer', ['_IN_ADDR']]],
+    }],
+    '_LOCAL_ADDRESS': [0x14, {
+        'pData': [0x10, ['pointer', ['pointer', ['_IN_ADDR']]]],
+    }],
+    '_ADDRINFO': [0x4, {
+        'Local': [0x0, ['pointer', ['_LOCAL_ADDRESS']]],
+        'Remote': [0x10, ['pointer', ['_IN_ADDR']]],
+    }],
+    '_TCP_ENDPOINT': [0x278, { # TcpE
+        'InetAF': [0x10, ['pointer', ['_INETAF']]],
+        'AddrInfo': [0x18, ['pointer', ['_ADDRINFO']]],
+        'State': [0x6C, ['Enumeration', dict(
+            target='long',
+            choices=TCP_STATE_ENUM)]],
+        'LocalPort': [0x70, ['unsigned be short']],
+        'RemotePort': [0x72, ['unsigned be short']],
+        'Owner': [0x2D8, ['pointer', ['_EPROCESS']]],
+        'CreateTime': [0x2E8, ['WinFileTime', {}]],
+    }],
+    '_UDP_ENDPOINT': [0x84, { # UdpA
+        'Owner': [0x28, ['pointer', ['_EPROCESS']]],
+        'CreateTime': [0x58, ['WinFileTime', {}]],
+        'LocalAddr': [0xA8, ['pointer', ['_LOCAL_ADDRESS_WIN10_UDP']]],
+        'InetAF': [0x20, ['pointer', ['_INETAF']]],
+        'MaskedPrevObj': [0x70, ['pointer', ['_UDP_ENDPOINT']]],
+        'Port': [0xA0, ['unsigned be short']],
+    }],
+}
+
+
+def is_win10_18363_or_later(profile):
+    if not profile.has_type('_KQOS_GROUPING_SETS'):
+        return False
+    return True
 
 
 class _TCP_LISTENER(obj.Struct):
     """Class for objects found in TcpL pools"""
+
+    MIN_CREATETIME_YEAR = 1950
+    MAX_CREATETIME_YEAR = 2200
+
+    def __init__(self, **kwargs):
+        super(_TCP_LISTENER, self).__init__(**kwargs)
+
+    def get_address_family(self):
+        try:
+            return self.InetAF.dereference().AddressFamily
+        except Exception as ex:
+            return None
+
+    def get_owner(self):
+        try:
+            return self.members.get('Owner').dereference()
+        except Exception as ex:
+            return None
+
+    def get_owner_pid(self):
+        if self.get_owner().is_valid():
+            temp = 0
 
     def dual_stack_sockets(self, vm=None):
         """Handle Windows dual-stack sockets"""
@@ -667,6 +877,15 @@ class _TCP_LISTENER(obj.Struct):
             if af_inet.AddressFamily.v() == AF_INET6:
                 yield "v6", inaddr6_any, inaddr6_any
 
+    def is_valid(self):
+        try:
+            if not self.get_address_family() in (AF_INET, AF_INET6):
+                return False
+        except Exception as ex:
+            return False
+        else:
+            return True
+
 
 class _TCP_ENDPOINT(_TCP_LISTENER):
     """Class for objects found in TcpE pools"""
@@ -693,6 +912,7 @@ class _TCP_ENDPOINT(_TCP_LISTENER):
 
 class _UDP_ENDPOINT(_TCP_LISTENER):
     """Class for objects found in UdpA pools"""
+
 
 class _UDP_ENDPOINT_WIN10x64(_UDP_ENDPOINT):
     """Class for objects found in UdpA pools"""
@@ -723,6 +943,7 @@ class _UDP_ENDPOINT_WIN10x64(_UDP_ENDPOINT):
             if af_inet.AddressFamily.v() == AF_INET6:
                 yield "v6", inaddr6_any, inaddr6_any
 
+
 class TcpipPluginMixin(object):
     """A mixin for plugins that want to use tcpip.sys profiles."""
 
@@ -750,22 +971,38 @@ class Tcpip(pe_vtypes.BasicPEProfile):
     @classmethod
     def Initialize(cls, profile):
         super(Tcpip, cls).Initialize(profile)
+        tokens = platform.platform().split('-')[2].split('.')
+        build_version = tokens[2]
+
+        if build_version == '18362' and is_win10_18363_or_later(profile.session.profile):
+            build_version = '18363'
+
         version = profile.session.profile.metadata("version")
 
-        # Network Object Classess for Vista, 2008, 7, and 10 x86 and x64
-        profile.add_classes(dict(_TCP_LISTENER=_TCP_LISTENER,
-                                 _TCP_ENDPOINT=_TCP_ENDPOINT))
-        if version >= 10.0:
-            profile.add_classes(dict(_UDP_ENDPOINT=_UDP_ENDPOINT_WIN10x64))
-        else:
-            profile.add_classes(dict(_UDP_ENDPOINT=_UDP_ENDPOINT))
+        # Network Object class for Vista, 2008, 7, and 10 x86 and x64
+        profile.add_classes(dict(
+            _TCP_LISTENER=_TCP_LISTENER,
+            _TCP_ENDPOINT=_TCP_ENDPOINT,
+            _UDP_ENDPOINT=_UDP_ENDPOINT,
+        ))
+        # if version >= 10.0:
+        #     profile.add_classes(dict(_UDP_ENDPOINT=_UDP_ENDPOINT_WIN10x64))
+        # else:
+        #     profile.add_classes(dict(_UDP_ENDPOINT=_UDP_ENDPOINT))
 
         # Switch on the kernel version. FIXME: This should be done using the
         # generate_types module.
-        if profile.metadata("arch") == "AMD64":
+        arch = profile.session.profile.metadata('arch')
+        if arch == "AMD64":
             # Windows 10
             if version >= 10.0:
-                profile.add_overlay(tcpip_vtypes_win10_64)
+                if build_version in ['19041', '19042']:
+                    profile.add_overlay(tcpip_vtypes_win10_64_19041)
+                elif build_version == '18363':
+                    profile.add_overlay(tcpip_vtypes_win10_64_18363)
+                else:
+                    profile.add_overlay(tcpip_vtypes_win10_64)
+
 
             # Vista SP1.
             elif version == 6.0:
@@ -785,7 +1022,7 @@ class Tcpip(pe_vtypes.BasicPEProfile):
             elif version == 5.2:
                 profile.add_overlay(tcpip_vtypes_2003_x64)
 
-        elif profile.metadata("arch") == "I386":
+        else:
             profile.add_overlay(tcpip_vtypes)
 
             # Win2k3
@@ -797,14 +1034,17 @@ class Tcpip(pe_vtypes.BasicPEProfile):
                 profile.add_overlay(tcpip_vtypes_vista)
 
             # Windows 7
-            elif version >= 6.1:
+            elif version == 6.1:
                 profile.add_overlay(tcpip_vtypes_vista)
                 profile.add_overlay(tcpip_vtypes_7)
 
             # Windows 10
             elif version >= 10.0:
-                profile.add_overlay(tcpip_vtypes_vista)
-                profile.add_overlay(tcpip_vtypes_win10_32)
+                #profile.add_overlay(tcpip_vtypes_vista)
+                if build_version in ['19041', '19042']:
+                    profile.add_overlay(tcpip_vtypes_win10_32_19041)
+                else:
+                    profile.add_overlay(tcpip_vtypes_win10_32)
 
         # Pool tags
         profile.add_constants(dict(UDP_END_POINT_POOLTAG=b"UdpA",

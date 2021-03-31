@@ -16,7 +16,9 @@ class Exporter:
         self.exporter = csv.writer(self.file_handle, delimiter='\t', quoting=csv.QUOTE_NONNUMERIC)
 
     def __del__(self):
-        self.file_handle.close()
+        if hasattr(self, 'file_handle'):
+            assert self.file_handle is not None
+            self.file_handle.close()
 
     def export_to_tsv(self, data: list):
         self.exporter.writerow(data)

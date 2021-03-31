@@ -1180,12 +1180,12 @@ class BasicPEProfile(basic.RelativeOffsetMixin, basic.BasicClasses):
         # If the architecture is not added yet default to 64 bit. NOTE that with
         # PE Profiles we normally guess the architecture based on the name
         # mangling conventions.
-        if profile.metadata("arch") is None:
+        if profile.session.profile.metadata("arch") is None:
             profile.set_metadata("arch", "AMD64")
 
         # Add the basic compiler model for windows.
-        if profile.metadata("arch") == "AMD64":
+        if profile.session.profile.metadata("arch") == "AMD64":
             basic.ProfileLLP64.Initialize(profile)
 
-        elif profile.metadata("arch") == "I386":
+        elif profile.session.profile.metadata("arch") == "I386":
             basic.Profile32Bits.Initialize(profile)

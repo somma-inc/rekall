@@ -34,6 +34,7 @@ import datetime
 AF_INET = 2
 AF_INET6 = 0x17
 
+
 class PoolScanUdpEndpoint(common.PoolScanner):
     """PoolScanner for Udp Endpoints"""
 
@@ -51,7 +52,7 @@ class PoolScanUdpEndpoint(common.PoolScanner):
 
             ('CheckPoolType', dict(non_paged=True, free=True, paged=True)),
 
-            ('CheckPoolIndex', dict(value=0)),
+            #('CheckPoolIndex', dict(value=0)),
             ]
 
 
@@ -72,7 +73,7 @@ class PoolScanTcpListener(common.PoolScanner):
 
             ('CheckPoolType', dict(non_paged=True, free=True, paged=True)),
 
-            ('CheckPoolIndex', dict(value=0)),
+            #('CheckPoolIndex', dict(value=0)),
             ]
 
 
@@ -93,7 +94,7 @@ class PoolScanTcpEndpoint(common.PoolScanner):
 
             ('CheckPoolType', dict(non_paged=True, free=True, paged=True)),
 
-            ('CheckPoolIndex', dict(value=0)),
+            #('CheckPoolIndex', dict(value=0)),
             ]
 
 
@@ -137,20 +138,21 @@ class WinNetscan(tcpip_vtypes.TcpipPluginMixin,
 
         for pool_obj in scanner.scan(run.start, run.length):
             pool_header_end = pool_obj.obj_offset + pool_obj.obj_size
-            tcpentry = self.tcpip_profile._TCP_LISTENER(
-                vm=run.address_space, offset=pool_header_end)
+            netw_obj = self.tcpip_profile._TCP_LISTENER(vm=run.address_space, offset=pool_header_end)
+
+            owner = netw_obj.Owner.dereference_as(
+                vm=self.kernel_address_space, profile=self.session.profile)
 
             # Only accept IPv4 or IPv6
-            af_inet = tcpentry.InetAF.dereference(vm=self.kernel_address_space)
+            af_inet = netw_obj.InetAF.dereference(vm=self.kernel_address_space)
             if af_inet.AddressFamily not in (AF_INET, AF_INET6):
-                continue
+               continue
 
             # For TcpL, the state is always listening and the remote port is
             # zero
-            for ver, laddr, raddr in tcpentry.dual_stack_sockets(
-                    vm=self.kernel_address_space):
-                yield (tcpentry, "TCP" + ver, laddr,
-                       tcpentry.Port, raddr, 0, "LISTENING")
+            for ver, laddr, raddr in netw_obj.dual_stack_sockets(vm=self.kernel_address_space):
+                yield (netw_obj, "TCP" + ver, laddr,
+                       netw_obj.Port, raddr, 0, "LISTENING")
 
         # Scan for TCP endpoints also known as connections
         scanner = PoolScanTcpEndpoint(
@@ -195,8 +197,7 @@ class WinNetscan(tcpip_vtypes.TcpipPluginMixin,
 
         for pool_obj in scanner.scan(run.start, run.length):
             pool_header_end = pool_obj.obj_offset + pool_obj.obj_size
-            udpentry = self.tcpip_profile._UDP_ENDPOINT(
-                vm=run.address_space, offset=pool_header_end)
+            udpentry = self.tcpip_profile._UDP_ENDPOINT(vm=run.address_space, offset=pool_header_end)
 
             af_inet = udpentry.InetAF.dereference(vm=self.kernel_address_space)
 
@@ -206,27 +207,20 @@ class WinNetscan(tcpip_vtypes.TcpipPluginMixin,
 
             # For UdpA, the state is always blank and the remote end is
             # asterisks
-            for ver, laddr, _ in udpentry.dual_stack_sockets(
-                    vm=self.kernel_address_space):
-                yield (udpentry, "UDP" + ver, laddr, udpentry.Port,
-                       "*", "*", "")
+            for ver, laddr, _ in udpentry.dual_stack_sockets(vm=self.kernel_address_space):
+                yield (udpentry, "UDP" + ver, laddr, udpentry.Port, "*", "*", "")
 
     def collect(self):
-        netscan_dict={}
+        netscan_dict = {}
         exporter = Exporter(self.plugin_args.output_file)
         for run in self.generate_memory_ranges():
-            for (net_object, proto, laddr, lport, raddr, rport,
-                 state) in self.generate_hits(run):
+            for (net_object, proto, laddr, lport, raddr, rport, state) in self.generate_hits(run):
                 lendpoint = "{0}:{1}".format(laddr, lport)
                 rendpoint = "{0}:{1}".format(raddr, rport)
 
-                owner = net_object.Owner.dereference_as(
-                    vm=self.kernel_address_space, profile=self.session.profile)
-                # print(os.get_terminal_size().columns*"-")
-
-                if owner.ImageFileName is None or len(owner.ImageFileName) <= 0:
+                owner = net_object.Owner.dereference_as(vm=self.kernel_address_space, profile=self.session.profile)
+                if owner.ImageFileName == 'EXCEL.EXE':
                     temp = 0
-
                 netscan_dict=dict(
                     protocol=proto,
                     src_ip=laddr,
@@ -238,9 +232,7 @@ class WinNetscan(tcpip_vtypes.TcpipPluginMixin,
                     process_name='' if len(owner.ImageFileName) <= 0 else owner.ImageFileName,
                     create_time=net_object.CreateTime.as_windows_timestamp()
                 )
-                if len(netscan_dict.values()) != 9:
-                    temp = 0
-                self.session.logging.info('values, length: {}'.format(len(netscan_dict.values())))
+
                 exporter.export_to_tsv(netscan_dict.values())
                 # print(dir(net_object.CreateTime))
                 yield (net_object.obj_offset, proto, lendpoint,

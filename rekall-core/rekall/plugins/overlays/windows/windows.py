@@ -39,7 +39,6 @@ from rekall.plugins.overlays.windows import crashdump
 from rekall.plugins.overlays.windows import undocumented
 
 
-
 class Ntoskrnl(pe_vtypes.BasicPEProfile):
     """A profile for Windows."""
 
