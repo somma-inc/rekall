@@ -847,10 +847,6 @@ class _TCP_LISTENER(obj.Struct):
         except Exception as ex:
             return None
 
-    def get_owner_pid(self):
-        if self.get_owner().is_valid():
-            temp = 0
-
     def dual_stack_sockets(self, vm=None):
         """Handle Windows dual-stack sockets"""
 

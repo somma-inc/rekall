@@ -36,6 +36,7 @@ https://www.dfrws.org/conferences/dfrws-usa-2019/sessions/windows-memory-forensi
 __author__ = "Frank Block <fblock@ernw.de>"
 
 import struct
+
 from rekall import plugin
 from rekall import addrspace
 from rekall.plugins import core
@@ -43,6 +44,7 @@ from rekall.plugins.windows import common
 from rekall.plugins.addrspaces.intel import DescriptorCollection
 from rekall.plugins.windows.pagefile import WindowsDTBDescriptor
 from rekall.plugins.addrspaces.intel import VirtualAddressDescriptor
+
 
 def get_vad_type_and_filename(vad):
     if isinstance(vad, int):
@@ -736,7 +738,6 @@ class PteEnumerator(common.WinProcessFilter):
         self.trans_pfn_start = pte.u.Trans.PageFrameNumber.start_bit
         self.large_page_mask = pte.u.Hard.LargePage.mask
 
-
     def _init_enums(self):
         enum = self.profile._MMPTE_SOFTWARE().Protection.choices
         self._executable_choices = \
@@ -744,7 +745,6 @@ class PteEnumerator(common.WinProcessFilter):
              'MM_PROTECT_ACCESS' in v.upper()]
         self._writable_choices = \
             [int(k) for k, v in enum.items() if 'WRITE' in v.upper()]
-
 
     def get_vad_for_address(self, address, supress_warning=False):
         vad_run = self.session.address_resolver._address_ranges.get_containing_range(address)
@@ -756,7 +756,6 @@ class PteEnumerator(common.WinProcessFilter):
             return None
         return vad_run[2].vad
 
-
     def vad_contains_image_file(self, vad):
         try:
             sec_obj_poi = vad.ControlArea.FilePointer.SectionObjectPointer
@@ -766,7 +765,6 @@ class PteEnumerator(common.WinProcessFilter):
             pass
 
         return False
-
 
     def render_vad(self, renderer, vad, pages):
         sorted_pages = sorted(pages['x_pages'], key=lambda x: x.start)
@@ -856,9 +854,9 @@ class PteEnumerator(common.WinProcessFilter):
     
         renderer.format("\n")
 
-        disassembler = self.session.plugins.dis(
-            offset=first_printable_page.start, length=0x40)
-        disassembler.render(renderer, suppress_headers=True)
+        # disassembler = self.session.plugins.dis(
+        #     offset=first_printable_page.start, length=0x40)
+        # disassembler.render(renderer, suppress_headers=True)
 
         if self.dump_dir:
             if type(vad) == int:
@@ -993,7 +991,7 @@ class PTEMalfind(core.DirectoryDumperMixin, PteEnumerator):
                 for run in pages['x_pages']:
                     proto = run.data['is_proto']
                     if not proto and run.file_offset:
-                        pfn = run.file_offset >> self.PAGE_BITS
+                        pfn = int(run.file_offset) >> self.PAGE_BITS
                         proto = self.mmpfn_db[pfn].u4.PrototypePte
                     
                     if proto and vad_contains_imagefile == None:

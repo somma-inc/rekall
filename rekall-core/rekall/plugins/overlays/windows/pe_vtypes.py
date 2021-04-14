@@ -1141,13 +1141,10 @@ class Demangler(object):
 
 class BasicPEProfile(basic.RelativeOffsetMixin, basic.BasicClasses):
     """A basic profile for a pe image.
-
     This profile deals with Microsoft Oddities like name mangling, and
     correcting global offsets to the base image address.
     """
-
     image_base = 0
-
     METADATA = dict(os="windows")
 
     def GetImageBase(self):
@@ -1155,16 +1152,13 @@ class BasicPEProfile(basic.RelativeOffsetMixin, basic.BasicClasses):
 
     def add_constants(self, constants=None, **opts):
         """Add the demangled constants.
-
         This allows us to handle 32 bit vs 64 bit constant names easily since
         the mangling rules are different.
         """
         demangler = Demangler(self._metadata)
         result = {}
-
         for k, v in six.iteritems(constants):
             result[demangler.DemangleName(k)] = v
-
         super(BasicPEProfile, self).add_constants(
             constants=result, **opts)
 
@@ -1176,16 +1170,13 @@ class BasicPEProfile(basic.RelativeOffsetMixin, basic.BasicClasses):
     @classmethod
     def Initialize(cls, profile):
         super(BasicPEProfile, cls).Initialize(profile)
-
         # If the architecture is not added yet default to 64 bit. NOTE that with
         # PE Profiles we normally guess the architecture based on the name
         # mangling conventions.
         if profile.session.profile.metadata("arch") is None:
             profile.set_metadata("arch", "AMD64")
-
         # Add the basic compiler model for windows.
         if profile.session.profile.metadata("arch") == "AMD64":
             basic.ProfileLLP64.Initialize(profile)
-
         elif profile.session.profile.metadata("arch") == "I386":
             basic.Profile32Bits.Initialize(profile)

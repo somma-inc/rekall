@@ -1,4 +1,4 @@
-import os
+import windows
 
 from rekall.plugins.windows.modscan import PoolScanModuleFast
 from rekall.plugins.windows import common
@@ -143,10 +143,14 @@ class ModMerge(common.PoolScannerPlugin):
                     dll_abs_path = ldr_entry.FullDllName.v(vm=self.kernel_address_space)
                     dll_abs_path = dll_abs_path.replace('\\SystemRoot', os.environ.get('systemroot', 'c:\\windows'))
 
+                verify_result, signers = windows.wintrust.verify_file_ex(dll_abs_path)
+
                 modmerge_dict = dict(
                     dllname=ldr_entry.BaseDllName.v(vm=self.kernel_address_space),
                     dllpath=dll_abs_path,
                     dllsize=ldr_entry.SizeOfImage,
+                    verify_result=verify_result,
+                    signers='|'.join(signers),
                     is_exists_in_modules=1 if is_exists_in_modules else 0,
                     is_unloaded_modules=1 if is_unloaded_modules else 0,
                     unloaded_timestamp=unloaded_timestamp
