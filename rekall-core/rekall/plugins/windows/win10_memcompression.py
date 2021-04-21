@@ -25,6 +25,7 @@ compressed before they are written to the pagefile. The classes within
 this file handle compressed pages and return the decompressed data
 when a compressed page is read.
 """
+import math
 
 from rekall import addrspace
 from rekall import config
@@ -323,7 +324,7 @@ class WindowsCompressionMixin(pagefile.WindowsPagedMemoryMixin):
 
         if isinstance(collection[-1],
                       intel.PhysicalAddressDescriptor):
-            paddr = collection[-1].address & self.PAGE_MASK
+            paddr = math.trunc(collection[-1].address) & self.PAGE_MASK
         else:
             paddr = None
 
