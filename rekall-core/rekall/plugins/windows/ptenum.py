@@ -34,7 +34,7 @@ https://www.dfrws.org/conferences/dfrws-usa-2019/sessions/windows-memory-forensi
 """
 
 __author__ = "Frank Block <fblock@ernw.de>"
-
+import os
 import struct
 
 from rekall import plugin
@@ -235,7 +235,6 @@ class PteEnumerator(common.WinProcessFilter):
 
             yield [vaddr, pte_value, pte_table_addr+i*8]
 
-
     def get_all_pages(self, start=0, end=2**64):
         """Simply enumerates all Paging structures and returns the virtual 
         address and, if possible, the PFN.
@@ -282,7 +281,6 @@ class PteEnumerator(common.WinProcessFilter):
                         address_space=self.proc_as.base,
                         data={'pte_value': pte_value, 'is_proto': False, 'pte_addr': pte_addr})
 
-
     def get_executable_pages(self, start=0, end=2**64):
         """Enumerate all available ranges for executable pages.
 
@@ -323,7 +321,6 @@ class PteEnumerator(common.WinProcessFilter):
                     if run:
                         yield run
 
-
     def _get_pfn_from_pte_value(self, pte_value):
         if pte_value & self.valid_mask:
             return ((pte_value & self.hard_pfn_mask) >> self.hard_pfn_start)
@@ -333,13 +330,11 @@ class PteEnumerator(common.WinProcessFilter):
 
         return None
 
-
     def _get_phys_addr_from_pte(self, vaddr, pte_value):
         pfn = self._get_pfn_from_pte_value(pte_value)
         if not pfn:
             return None
         return (pfn << self.PAGE_BITS) | (vaddr & 0xFFF)
-
 
     def is_demand_zero_pte(self, pte_value):
         
@@ -355,7 +350,6 @@ class PteEnumerator(common.WinProcessFilter):
             return True
             
         return False
-
 
     # TODO Integrate changes in pagefile.py
     #      Waiting for https://github.com/google/rekall/pull/501
@@ -393,7 +387,6 @@ class PteEnumerator(common.WinProcessFilter):
                     subsection.StartingSector * 512)
 
                 return self.proc_as.base.get_mapped_offset(filename, file_offset)
-
 
     def is_page_executable(self, vaddr, pte_value):
         """This function returns a Run object for pages that are executable.
@@ -499,7 +492,6 @@ class PteEnumerator(common.WinProcessFilter):
             "Unknown PTE value: 0x{:x}".format(pte_value))
         return None
 
-
     def is_page_executable_proto(self, vaddr, pte_value):
         """This function returns a Run object for pages that are executable.
         It will, however, skip pages that have not yet been accessed, even if
@@ -582,7 +574,6 @@ class PteEnumerator(common.WinProcessFilter):
             "Unknown PTE value: 0x{:x}".format(pte_value))
         return None
 
-
     # taken from get_mappings in rekall-core/rekall/plugins/addrspaces/intel.py
     def get_available_PDEs_x86(self, start=0, end=2**64):
         """A generator of address, length tuple for all valid memory regions."""
@@ -630,7 +621,6 @@ class PteEnumerator(common.WinProcessFilter):
 
                 yield [vaddr, pde_value, pde_addr]
 
-
     # taken from rekall-core/rekall/plugins/addrspaces/amd64.py
     def get_available_PTEs_x86(self, vaddr, pde_value, start=0, end=2**64):
 
@@ -655,7 +645,6 @@ class PteEnumerator(common.WinProcessFilter):
                 continue
 
             yield [vaddr, pte_value, pte_table_addr + i * 8]
-
 
     def get_all_pages_x86(self, start=0, end=2**64):
 
@@ -685,7 +674,6 @@ class PteEnumerator(common.WinProcessFilter):
                     address_space=self.proc_as.base,
                     data={'pte_value': pte_value, 'is_proto': False, 'pte_addr': pte_addr, 'pfn': pfn})
 
-
     def get_executable_pages_x86(self, start=0, end=2**64):
 
         for pde_vaddr, pde_value, _ in self.get_available_PDEs_x86(start, end):
@@ -706,7 +694,6 @@ class PteEnumerator(common.WinProcessFilter):
                 run = self.is_page_executable(vaddr, pte_value)
                 if run:
                     yield run
-
 
     def _init_masks(self):
         pte = self.session.profile._MMPTE()
@@ -772,10 +759,10 @@ class PteEnumerator(common.WinProcessFilter):
         first_printable_page = first_page
         memory_area_start = first_page.start if type(vad) == int else vad.Start
 
-        i=1
+        i = 1
         while not first_printable_page.file_offset and i < len(sorted_pages):
             first_printable_page = sorted_pages[i]
-            i+=1
+            i += 1
 
         p_bytes = sum([x.length for x in pages['x_pages']])
         renderer.section()
@@ -899,6 +886,38 @@ class PteEnumerator(common.WinProcessFilter):
 
         renderer.format("\n")
 
+    def custom_render_vad(self, vad, pages, renderer, handle_table):
+        sorted_pages = sorted(pages['x_pages'], key=lambda x: x.start)
+        first_page = sorted_pages[0]
+        first_printable_page = first_page
+        memory_area_start = first_page.start if type(vad) == int else vad.Start
+
+        if type(vad) == int:
+            type_string = 'page'
+            memory_area_end = \
+                memory_area_start + first_printable_page.length - 1
+        else:
+            type_string = 'vad'
+            memory_area_end = vad.End
+
+        if type_string in handle_table:
+            fd = handle_table[type_string]
+        else:
+            fd = renderer.open(
+                directory=self.dump_dir,
+                filename='{0}.{1:d}.{2}.dmp'.format(self.proc.ImageFileName, self.proc.pid, type_string),
+                mode='wb+'
+            )
+            handle_table[type_string] = fd
+
+        if type(vad) == int:
+            fd.write(
+                self.proc_as.read(memory_area_start,
+                                  first_printable_page.length - 1))
+
+        else:
+            self.CopyToFile(self.proc_as, memory_area_start,
+                            memory_area_end, fd)
 
     def is_page_empty(self, run):
         """
@@ -917,7 +936,6 @@ class PteEnumerator(common.WinProcessFilter):
                     == b"\x00" * run.length
 
         return None
-
 
     def init_for_proc(self, proc=None):
         if not proc:
@@ -956,6 +974,8 @@ class PTEMalfind(core.DirectoryDumperMixin, PteEnumerator):
         # used for pages not belonging to any vad
         no_vad_counter = 0
         for proc in self.filter_processes():
+            if os.getpid() == proc.pid:
+                continue
 
             if not self.init_for_proc(proc):
                 continue
@@ -980,6 +1000,8 @@ class PTEMalfind(core.DirectoryDumperMixin, PteEnumerator):
                 else:
                     result[vad]['x_pages'].append(run)
 
+            handle_table = {
+            }
             for vad, pages in result.items():
                 if self.plugin_args.ignore_image_files and \
                         self.vad_contains_image_file(vad):
@@ -1016,4 +1038,6 @@ class PTEMalfind(core.DirectoryDumperMixin, PteEnumerator):
                 if not vad_should_be_printed or not pages['x_pages']:
                     continue
 
-                self.render_vad(renderer, vad, pages)
+                # refac
+                # self.render_vad(renderer, vad, pages)
+                self.custom_render_vad(vad, pages, renderer, handle_table)
