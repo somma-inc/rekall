@@ -21,7 +21,7 @@
 
 Output is similar to objdump or pefile.
 """
-
+import os, datetime
 from builtins import zip
 __author__ = "Michael Cohen <scudette@gmail.com>"
 
@@ -46,7 +46,11 @@ class PEInfo(plugin.TypedProfileCommand, plugin.Command):
              "from this file."),
 
         dict(name="address_space", default=None,
-             help="The address space to use.")
+             help="The address space to use."),
+
+        dict(name='output_file',
+             default=os.path.join('.', f'peinfo_{datetime.datetime.utcnow().timestamp()}.tsv'),
+             help='output file specific path')
     ]
 
     def __init__(self, *args, **kwargs):
@@ -83,6 +87,9 @@ class PEInfo(plugin.TypedProfileCommand, plugin.Command):
             filename=self.plugin_args.executable,
             image_base=self.plugin_args.image_base)
 
+        with open(self.plugin_args.output_file, "w") as f:
+            f.write(self.pe_helper.RSDS.GUID_AGE)
+
         self.disassembler = self.session.plugins.dis(
             address_space=self.pe_helper.vm,
             session=self.session, length=4)
@@ -90,120 +97,120 @@ class PEInfo(plugin.TypedProfileCommand, plugin.Command):
     def render(self, renderer):
         """Print information about a PE file from memory."""
         # Get our helper object to parse the PE file.
-        renderer.table_header([('Attribute', 'attribute', '<30'),
-                               ('Value', 'value', '60')])
-
-        for field in ["Machine", "TimeDateStamp", "Characteristics"]:
-            renderer.table_row(
-                field,
-                getattr(self.pe_helper.nt_header.FileHeader, field))
-
-        renderer.table_row("GUID/Age", self.pe_helper.RSDS.GUID_AGE)
-        renderer.table_row("PDB", self.pe_helper.RSDS.Filename)
-
-        for field in ["MajorOperatingSystemVersion",
-                      "MinorOperatingSystemVersion",
-                      "MajorImageVersion",
-                      "MinorImageVersion",
-                      "MajorSubsystemVersion",
-                      "MinorSubsystemVersion"]:
-            renderer.table_row(
-                field,
-                getattr(self.pe_helper.nt_header.OptionalHeader, field))
-
-        renderer.format(
-            "\nSections (Relative to {0:addrpad}):\n",
-            self.pe_helper.image_base)
-
-        renderer.table_header([('Perm', 'perm', '4'),
-                               ('Name', 'name', '<8'),
-                               ('Raw Off', 'raw', '[addrpad]'),
-                               ('VMA', 'vma', '[addrpad]'),
-                               ('Size', 'size', '[addrpad]')])
-
-        for section in self.pe_helper.nt_header.Sections:
-            renderer.table_row(section.execution_flags, section.Name,
-                               section.PointerToRawData,
-                               section.VirtualAddress,
-                               section.SizeOfRawData)
-
-        renderer.format("\nData Directories:\n")
-        renderer.table_header([('', 'name', '<40'),
-                               ('VMA', 'vma', '[addrpad]'),
-                               ('Size', 'size', '[addrpad]')])
-
-        for d in self.pe_helper.nt_header.OptionalHeader.DataDirectory:
-            renderer.table_row(d.obj_name, d.VirtualAddress, d.Size)
-
-
-        # Export/Import directory only if verbosity is higher than 1.
-        if self.plugin_args.verbosity >= 1:
-            renderer.format("\nImport Directory (Original):\n")
-            renderer.table_header([('Name', 'name', '<50'),
-                                   ('Mapped Function', 'function', '60'),
-                                   ('Ord', 'ord', '5')])
-
-            resolver = self.session.address_resolver
-            # Merge the results from both the Import table and the
-            # IAT. Sometimes the original Import Table is no longer mapped into
-            # memory (since its usually only used by the loader in order to
-            # build the IAT). In this case we can show something sensible using
-            # the address resolver.
-            for (dll, name, ordinal), (_, func, _) in zip(
-                    self.pe_helper.ImportDirectory(),
-                    self.pe_helper.IAT()):
-                renderer.table_row(
-                    u"%s!%s" % (dll, name or ""),
-                    resolver.format_address(func.v()),
-                    ordinal)
-
-            if self.plugin_args.verbosity >= 2:
-                renderer.format("\nImport Address Table:\n")
-                renderer.table_header(
-                    [('Name', 'name', '<20'),
-                     ('Address', 'address', '[addrpad]'),
-                     ('Disassembly', 'disassembly', '30')])
-
-                for name, function, ordinal in self.pe_helper.IAT():
-                    disassembly = []
-
-                    for x in self.disassembler.disassemble(function):
-                        disassembly.append(x[-1].strip())
-
-                    renderer.table_row(name, function, "\n".join(disassembly))
-
-            renderer.format("\nExport Directory:\n")
-            renderer.table_header([('Entry', 'entry', '[addrpad]'),
-                                   ('Stat', 'status', '4'),
-                                   ('Ord', 'ord', '5'),
-                                   ('Name', 'name', '')])
-
-            resolver = self.session.address_resolver
-
-            for _ in self.pe_helper.ExportDirectory():
-                dll, function, name, ordinal = _
-                status = 'M' if function.dereference() else "-"
-
-                # Resolve the exported function through the symbol resolver.
-                symbol_name = resolver.format_address(function)
-                if symbol_name:
-                    symbol_name = u"%s!%s (%s)" % (
-                        dll, name or "", ", ".join(symbol_name))
-                else:
-                    symbol_name = u"%s!%s" % (dll, name or "")
-
-                renderer.table_row(
-                    function,
-                    status,
-                    ordinal,
-                    symbol_name)
-
-        renderer.format("Version Information:\n")
-        renderer.table_header([('key', 'key', '<20'),
-                               ('value', 'value', '')])
-
-        for k, v in self.pe_helper.VersionInformation():
-            renderer.table_row(k, v)
+        # renderer.table_header([('Attribute', 'attribute', '<30'),
+        #                        ('Value', 'value', '60')])
+        #
+        # for field in ["Machine", "TimeDateStamp", "Characteristics"]:
+        #     renderer.table_row(
+        #         field,
+        #         getattr(self.pe_helper.nt_header.FileHeader, field))
+        #
+        # renderer.table_row("GUID/Age", self.pe_helper.RSDS.GUID_AGE)
+        # renderer.table_row("PDB", self.pe_helper.RSDS.Filename)
+        #
+        # for field in ["MajorOperatingSystemVersion",
+        #               "MinorOperatingSystemVersion",
+        #               "MajorImageVersion",
+        #               "MinorImageVersion",
+        #               "MajorSubsystemVersion",
+        #               "MinorSubsystemVersion"]:
+        #     renderer.table_row(
+        #         field,
+        #         getattr(self.pe_helper.nt_header.OptionalHeader, field))
+        #
+        # renderer.format(
+        #     "\nSections (Relative to {0:addrpad}):\n",
+        #     self.pe_helper.image_base)
+        #
+        # renderer.table_header([('Perm', 'perm', '4'),
+        #                        ('Name', 'name', '<8'),
+        #                        ('Raw Off', 'raw', '[addrpad]'),
+        #                        ('VMA', 'vma', '[addrpad]'),
+        #                        ('Size', 'size', '[addrpad]')])
+        #
+        # for section in self.pe_helper.nt_header.Sections:
+        #     renderer.table_row(section.execution_flags, section.Name,
+        #                        section.PointerToRawData,
+        #                        section.VirtualAddress,
+        #                        section.SizeOfRawData)
+        #
+        # renderer.format("\nData Directories:\n")
+        # renderer.table_header([('', 'name', '<40'),
+        #                        ('VMA', 'vma', '[addrpad]'),
+        #                        ('Size', 'size', '[addrpad]')])
+        #
+        # for d in self.pe_helper.nt_header.OptionalHeader.DataDirectory:
+        #     renderer.table_row(d.obj_name, d.VirtualAddress, d.Size)
+        #
+        #
+        # # Export/Import directory only if verbosity is higher than 1.
+        # if self.plugin_args.verbosity >= 1:
+        #     renderer.format("\nImport Directory (Original):\n")
+        #     renderer.table_header([('Name', 'name', '<50'),
+        #                            ('Mapped Function', 'function', '60'),
+        #                            ('Ord', 'ord', '5')])
+        #
+        #     resolver = self.session.address_resolver
+        #     # Merge the results from both the Import table and the
+        #     # IAT. Sometimes the original Import Table is no longer mapped into
+        #     # memory (since its usually only used by the loader in order to
+        #     # build the IAT). In this case we can show something sensible using
+        #     # the address resolver.
+        #     for (dll, name, ordinal), (_, func, _) in zip(
+        #             self.pe_helper.ImportDirectory(),
+        #             self.pe_helper.IAT()):
+        #         renderer.table_row(
+        #             u"%s!%s" % (dll, name or ""),
+        #             resolver.format_address(func.v()),
+        #             ordinal)
+        #
+        #     if self.plugin_args.verbosity >= 2:
+        #         renderer.format("\nImport Address Table:\n")
+        #         renderer.table_header(
+        #             [('Name', 'name', '<20'),
+        #              ('Address', 'address', '[addrpad]'),
+        #              ('Disassembly', 'disassembly', '30')])
+        #
+        #         for name, function, ordinal in self.pe_helper.IAT():
+        #             disassembly = []
+        #
+        #             for x in self.disassembler.disassemble(function):
+        #                 disassembly.append(x[-1].strip())
+        #
+        #             renderer.table_row(name, function, "\n".join(disassembly))
+        #
+        #     renderer.format("\nExport Directory:\n")
+        #     renderer.table_header([('Entry', 'entry', '[addrpad]'),
+        #                            ('Stat', 'status', '4'),
+        #                            ('Ord', 'ord', '5'),
+        #                            ('Name', 'name', '')])
+        #
+        #     resolver = self.session.address_resolver
+        #
+        #     for _ in self.pe_helper.ExportDirectory():
+        #         dll, function, name, ordinal = _
+        #         status = 'M' if function.dereference() else "-"
+        #
+        #         # Resolve the exported function through the symbol resolver.
+        #         symbol_name = resolver.format_address(function)
+        #         if symbol_name:
+        #             symbol_name = u"%s!%s (%s)" % (
+        #                 dll, name or "", ", ".join(symbol_name))
+        #         else:
+        #             symbol_name = u"%s!%s" % (dll, name or "")
+        #
+        #         renderer.table_row(
+        #             function,
+        #             status,
+        #             ordinal,
+        #             symbol_name)
+        #
+        # renderer.format("Version Information:\n")
+        # renderer.table_header([('key', 'key', '<20'),
+        #                        ('value', 'value', '')])
+        #
+        # for k, v in self.pe_helper.VersionInformation():
+        #     renderer.table_row(k, v)
 
 
 class TestPEInfo(testlib.SimpleTestCase):
